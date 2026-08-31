@@ -1,0 +1,81 @@
+@import 'tailwindcss';
+
+:root {
+  --background: #f7f6f1;
+  --foreground: #17362c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: Arial, Helvetica, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+a { text-decoration: none; }
+button, input, select, textarea { font: inherit; }
+button, summary, select { cursor: pointer; }
+::selection { background: #caa75a; color: #10271f; }
+
+.display {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 400;
+}
+
+.eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8b763f;
+}
+
+.form-field {
+  min-height: 3rem;
+  width: 100%;
+  border: 1px solid #d9ddd6;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.75rem 1rem;
+  color: #17362c;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.form-field:focus {
+  border-color: #17362c;
+  box-shadow: 0 0 0 3px rgba(23, 54, 44, 0.1);
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #6b756e;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mobile-menu summary { list-style: none; }
+.mobile-menu summary::-webkit-details-marker { display: none; }
+.mobile-menu[open] .menu-open { display: none; }
+.mobile-menu[open] .menu-close { display: block; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
