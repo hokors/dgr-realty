@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { Bath, BedDouble, CarFront, MapPin, MoveDiagonal } from 'lucide-react';
+import { Bath, BedDouble, MapPin, Maximize2, MoveDiagonal } from 'lucide-react';
 import { formatArea, formatPrice } from '@/lib/format';
 import type { Property } from '@/lib/types';
 
@@ -11,53 +11,41 @@ type PropertyCardProps = {
 
 export function PropertyCard({ property, priority = false }: PropertyCardProps) {
   const mainImage = property.images[0];
+  const area = property.floorArea
+    ? { icon: Maximize2, label: `${formatArea(property.floorArea)} floor` }
+    : property.lotArea
+      ? { icon: MoveDiagonal, label: `${formatArea(property.lotArea)} lot` }
+      : null;
   const specs = [
     property.bedrooms ? { icon: BedDouble, label: `${property.bedrooms} beds` } : null,
     property.bathrooms ? { icon: Bath, label: `${property.bathrooms} baths` } : null,
-    property.parkingSpaces ? { icon: CarFront, label: `${property.parkingSpaces} parking` } : null,
-    property.lotArea ? { icon: MoveDiagonal, label: formatArea(property.lotArea) } : null,
-  ].filter(Boolean).slice(0, 3) as Array<{ icon: typeof BedDouble; label: string }>;
+    area,
+  ].filter(Boolean) as Array<{ icon: typeof BedDouble; label: string }>;
 
   return (
-    <article className="group overflow-hidden rounded-[22px] border border-[#dfe2dc] bg-white transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_rgba(23,54,44,0.10)]">
-      <Link href={`/properties/${property.slug}`} className="block" aria-label={`View ${property.title}`}>
-        <div className="relative aspect-[4/3] overflow-hidden bg-[#dfe3dc]">
+    <article className="group overflow-hidden rounded-2xl border border-[#e1e5e1] bg-white transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(29,39,33,0.10)]">
+      <Link href={`/properties/${property.slug}`} className="block h-full" aria-label={`View ${property.title}`}>
+        <div className="relative aspect-[4/3] overflow-hidden bg-[#e6e9e6]">
           {mainImage ? (
-            <Image
-              src={mainImage.imageUrl}
-              alt={mainImage.altText ?? property.title}
-              fill
-              priority={priority}
-              unoptimized
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              className="object-cover transition duration-700 group-hover:scale-[1.035]"
-            />
+            <Image src={mainImage.imageUrl} alt={mainImage.altText ?? property.title} fill priority={priority} unoptimized sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover transition duration-500 group-hover:scale-[1.025]" />
           ) : (
-            <div className="grid h-full place-items-center text-sm text-[#6e7771]">Photo coming soon</div>
+            <div className="grid h-full place-items-center text-sm text-[#747c77]">Photo coming soon</div>
           )}
           <div className="absolute inset-x-0 top-0 flex items-start justify-between p-4">
-            <span className="rounded-full bg-[#f7f6f1]/95 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-[#17362c] backdrop-blur">
-              {property.listingType}
-            </span>
-            {property.status !== 'Available' && (
-              <span className="rounded-full bg-[#17362c]/90 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-white backdrop-blur">
-                {property.status}
-              </span>
-            )}
+            <span className="rounded-lg bg-white/95 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[#24634e] shadow-sm backdrop-blur">{property.listingType}</span>
+            {property.status !== 'Available' && <span className="rounded-lg bg-[#202522]/88 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-white backdrop-blur">{property.status}</span>}
           </div>
         </div>
-        <div className="p-5 sm:p-6">
-          <div className="mb-3 flex items-center justify-between gap-4">
-            <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#978147]">{property.category}</span>
-            <span className="flex items-center gap-1 text-xs text-[#6e7771]"><MapPin className="h-3.5 w-3.5" /> {property.city}</span>
+        <div className="p-5">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-xl font-bold tracking-[-0.035em] text-[#202522]">{formatPrice(property.price, property.priceSuffix)}</p>
+            <span className="shrink-0 rounded-full bg-[#edf4f0] px-2.5 py-1 text-[10px] font-bold text-[#24634e]">{property.category}</span>
           </div>
-          <h3 className="min-h-14 text-xl font-semibold leading-7 tracking-[-0.03em] text-[#17362c]">{property.title}</h3>
-          <p className="mt-4 text-lg font-semibold text-[#17362c]">{formatPrice(property.price, property.priceSuffix)}</p>
+          <h3 className="mt-3 line-clamp-2 min-h-12 text-[17px] font-semibold leading-6 tracking-[-0.02em] text-[#2a2f2c]">{property.title}</h3>
+          <p className="mt-2 flex items-start gap-1.5 text-xs leading-5 text-[#6a726d]"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#24634e]" /> {property.location}</p>
           {specs.length > 0 && (
-            <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 border-t border-[#e6e7e2] pt-4 text-xs text-[#657069]">
-              {specs.map(({ icon: Icon, label }) => (
-                <span key={label} className="flex items-center gap-1.5"><Icon className="h-3.5 w-3.5" /> {label}</span>
-              ))}
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-[#edf0ec] pt-4 text-[11px] text-[#59615c]">
+              {specs.map(({ icon: Icon, label }) => <span key={label} className="flex items-center gap-1.5"><Icon className="h-3.5 w-3.5 text-[#7a827d]" /> {label}</span>)}
             </div>
           )}
         </div>

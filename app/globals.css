@@ -1,8 +1,8 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #f7f6f1;
-  --foreground: #17362c;
+  --background: #f8f9f7;
+  --foreground: #202522;
 }
 
 @theme inline {
@@ -23,11 +23,11 @@ body {
 a { text-decoration: none; }
 button, input, select, textarea { font: inherit; }
 button, summary, select { cursor: pointer; }
-::selection { background: #caa75a; color: #10271f; }
+::selection { background: #cfe3da; color: #173f32; }
 
 .display {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-weight: 400;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 650;
 }
 
 .eyebrow {
@@ -35,7 +35,7 @@ button, summary, select { cursor: pointer; }
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #8b763f;
+  color: #24634e;
 }
 
 .form-field {
@@ -45,15 +45,15 @@ button, summary, select { cursor: pointer; }
   border-radius: 0.75rem;
   background: #fff;
   padding: 0.75rem 1rem;
-  color: #17362c;
+  color: #202522;
   font-size: 0.875rem;
   outline: none;
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .form-field:focus {
-  border-color: #17362c;
-  box-shadow: 0 0 0 3px rgba(23, 54, 44, 0.1);
+  border-color: #24634e;
+  box-shadow: 0 0 0 3px rgba(36, 99, 78, 0.1);
 }
 
 .field-label {

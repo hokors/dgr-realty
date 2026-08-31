@@ -2,16 +2,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowRight,
-  Building2,
-  Check,
-  Factory,
-  Fence,
-  House,
-  KeyRound,
-  Map,
+  CheckCircle2,
+  Mail,
   MapPin,
+  MessageCircle,
+  Phone,
   Search,
-  Sprout,
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
@@ -24,27 +20,28 @@ import { getProperties } from '@/lib/properties';
 export const dynamic = 'force-dynamic';
 
 const categoryDetails = [
-  { name: 'House', note: 'Family homes and private residences', icon: House },
-  { name: 'Condominium', note: 'Easy city living and investments', icon: Building2 },
-  { name: 'Lot', note: 'Residential lots ready for your plans', icon: Fence },
-  { name: 'Raw Land', note: 'Large parcels for future growth', icon: Map },
-  { name: 'Rentals', note: 'Move-in-ready homes and units', icon: KeyRound },
-  { name: 'Commercial', note: 'Spaces for business and enterprise', icon: Factory },
-  { name: 'Farm Lot', note: 'Agricultural and countryside land', icon: Sprout },
+  { name: 'House', label: 'Houses', image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85' },
+  { name: 'Condominium', label: 'Condominiums', image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=85' },
+  { name: 'Lot', label: 'Residential Lots', image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=85' },
+  { name: 'Raw Land', label: 'Raw Land', image: 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1200&q=85' },
+  { name: 'Rentals', label: 'Rentals', image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85' },
+  { name: 'Commercial', label: 'Commercial', image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=85' },
+  { name: 'Farm Lot', label: 'Farm Lots', image: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=1200&q=85' },
 ];
 
 export default async function Home() {
   const properties = await getProperties();
-  const featured = properties.filter((property) => property.featured).slice(0, 3);
+  const selectedFeatured = properties.filter((property) => property.featured);
+  const featured = (selectedFeatured.length > 0 ? selectedFeatured : properties).slice(0, 3);
   const recent = [...properties]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 4);
 
   return (
-    <main className="min-h-screen bg-[#f7f6f1] text-[#17362c]">
-      <Header overlay />
+    <main className="min-h-screen bg-[#f8f9f7] text-[#202522]">
+      <Header />
 
-      <section className="relative isolate min-h-[760px] overflow-hidden bg-[#17362c] text-white lg:min-h-[820px]">
+      <section className="relative isolate min-h-[650px] overflow-hidden bg-[#dce2dd] text-white lg:min-h-[700px]">
         <Image
           src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2200&q=90"
           alt="Contemporary home surrounded by landscaped greenery"
@@ -54,143 +51,110 @@ export default async function Home() {
           sizes="100vw"
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,31,24,.92)_0%,rgba(9,31,24,.57)_52%,rgba(9,31,24,.18)_100%)]" />
-        <div className="relative mx-auto flex min-h-[760px] max-w-[1440px] items-end px-5 pb-16 pt-36 sm:px-8 lg:min-h-[820px] lg:px-12 lg:pb-24">
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,26,23,.72)_0%,rgba(20,26,23,.34)_55%,rgba(20,26,23,.12)_100%)]" />
+        <div className="relative mx-auto flex min-h-[650px] max-w-[1440px] items-center px-5 py-16 sm:px-8 lg:min-h-[700px] lg:px-12">
           <div className="w-full max-w-4xl">
-            <p className="mb-5 text-xs font-bold uppercase tracking-[0.2em] text-[#d6b66f]">Homes, land &amp; investments</p>
-            <h1 className="display max-w-3xl text-5xl leading-[0.94] tracking-[-0.045em] sm:text-7xl lg:text-[86px]">
-              Find your place in Pampanga.
-            </h1>
-            <p className="mt-6 max-w-xl text-base leading-7 text-white/75 sm:text-lg">
-              A carefully curated property collection for buyers, renters, and investors ready to make their next move.
-            </p>
+            <p className="mb-4 text-xs font-bold uppercase tracking-[0.18em] text-white/75">Property across Pampanga</p>
+            <h1 className="display max-w-3xl text-5xl leading-[0.98] tracking-[-0.055em] sm:text-7xl lg:text-[82px]">Find your next property.</h1>
+            <p className="mt-5 max-w-2xl text-base leading-7 text-white/85 sm:text-lg">Search homes, land, commercial spaces, rentals, and investment opportunities in one trusted place.</p>
 
-            <form action="/properties" className="mt-10 grid max-w-3xl gap-px overflow-hidden rounded-2xl bg-white/15 p-1 shadow-2xl backdrop-blur-md sm:grid-cols-[1.2fr_1fr_auto]">
-              <label className="bg-white px-5 py-4 text-[#17362c]">
-                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#758078]"><MapPin className="h-3 w-3" /> Location</span>
-                <input name="location" className="mt-1 w-full bg-transparent text-sm outline-none placeholder:text-[#68736d]" placeholder="City or area" />
+            <form action="/properties" className="mt-9 grid max-w-4xl gap-2 rounded-2xl bg-white p-2 shadow-[0_18px_55px_rgba(16,24,20,0.24)] sm:grid-cols-[0.8fr_1fr_1.2fr_auto]">
+              <label className="rounded-xl px-4 py-3 text-[#202522] hover:bg-[#f5f7f4]">
+                <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[#747c77]">I want to</span>
+                <select name="listingType" className="mt-1 w-full bg-transparent text-sm font-semibold outline-none"><option value="For Sale">Buy</option><option value="For Rent">Rent</option></select>
               </label>
-              <label className="bg-white px-5 py-4 text-[#17362c]">
-                <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-[#758078]">Property type</span>
-                <select name="category" className="mt-1 w-full bg-transparent text-sm outline-none">
-                  <option value="All">All properties</option>
-                  {propertyCategories.map((category) => <option key={category}>{category}</option>)}
-                </select>
+              <label className="rounded-xl border-t border-[#edf0ec] px-4 py-3 text-[#202522] hover:bg-[#f5f7f4] sm:border-l sm:border-t-0">
+                <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[#747c77]">Property type</span>
+                <select name="category" className="mt-1 w-full bg-transparent text-sm font-semibold outline-none"><option value="All">All properties</option>{propertyCategories.map((category) => <option key={category}>{category}</option>)}</select>
               </label>
-              <button className="flex items-center justify-center gap-2 bg-[#caa75a] px-7 py-4 text-sm font-bold text-[#10271f] transition hover:bg-[#d8bb79]">
-                <Search className="h-4 w-4" /> Search
-              </button>
+              <label className="rounded-xl border-t border-[#edf0ec] px-4 py-3 text-[#202522] hover:bg-[#f5f7f4] sm:border-l sm:border-t-0">
+                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#747c77]"><MapPin className="h-3 w-3" /> Location</span>
+                <input name="location" className="mt-1 w-full bg-transparent text-sm font-semibold outline-none placeholder:font-normal placeholder:text-[#8a918d]" placeholder="City or area" />
+              </label>
+              <button className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#24634e] px-7 py-4 text-sm font-bold text-white transition hover:bg-[#1b4f3e]"><Search className="h-4 w-4" /> Search</button>
             </form>
           </div>
         </div>
-        <div className="absolute bottom-7 right-8 hidden items-center gap-3 text-xs text-white/60 lg:flex">
-          <span className="h-px w-12 bg-white/40" /> Curated property opportunities
-        </div>
       </section>
 
-      <section className="border-b border-[#dfe2dc] bg-white">
-        <div className="mx-auto grid max-w-[1440px] grid-cols-2 divide-x divide-[#e4e6e1] px-5 py-7 sm:px-8 md:grid-cols-4 lg:px-12">
-          {[
-            ['7', 'Property categories'],
-            [`${properties.length}+`, 'Active opportunities'],
-            ['Local', 'Market knowledge'],
-            ['Direct', 'Personal guidance'],
-          ].map(([value, label]) => (
-            <div key={label} className="px-4 py-2 text-center first:pl-0 last:pr-0">
-              <p className="display text-2xl text-[#17362c] sm:text-3xl">{value}</p>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[#78827b]">{label}</p>
-            </div>
-          ))}
+      <section id="categories" className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
+        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div><p className="eyebrow">Browse by property type</p><h2 className="display mt-3 text-3xl tracking-[-0.04em] sm:text-5xl">Start with what fits your plans.</h2></div>
+          <Link href="/properties" className="flex items-center gap-2 text-sm font-semibold text-[#24634e] hover:text-[#173f32]">View all properties <ArrowRight className="h-4 w-4" /></Link>
         </div>
-      </section>
-
-      <section id="about" className="mx-auto grid max-w-[1440px] gap-12 px-6 py-24 sm:px-8 md:grid-cols-[0.8fr_1.2fr] lg:px-12 lg:py-32">
-        <div>
-          <p className="eyebrow">A better property search</p>
-        </div>
-        <div>
-          <h2 className="display max-w-4xl text-4xl leading-[1.05] tracking-[-0.035em] sm:text-5xl lg:text-6xl">
-            Real estate decisions deserve clarity, local insight, and a more personal approach.
-          </h2>
-          <div className="mt-8 grid gap-6 text-sm leading-7 text-[#647069] sm:grid-cols-2">
-            <p>DGR Realty brings available homes, land, rentals, and commercial opportunities into one organized place—so you can compare confidently and inquire directly.</p>
-            <p>Every listing is presented with useful details and an easy next step, whether you are buying your first home, finding a tenant, or planning your next investment.</p>
-          </div>
-        </div>
-      </section>
-
-      <section id="categories" className="bg-[#17362c] py-24 text-white lg:py-28">
-        <div className="mx-auto max-w-[1440px] px-6 sm:px-8 lg:px-12">
-          <div className="mb-12 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="eyebrow text-[#d6b66f]">Browse by category</p>
-              <h2 className="display mt-4 text-4xl tracking-[-0.035em] sm:text-5xl">What are you looking for?</h2>
-            </div>
-            <Link href="/properties" className="group flex items-center gap-2 text-sm font-semibold text-white/75 hover:text-white">
-              View all properties <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-            </Link>
-          </div>
-          <div className="grid overflow-hidden rounded-[26px] border border-white/15 sm:grid-cols-2 lg:grid-cols-4">
-            {categoryDetails.map(({ name, note, icon: Icon }, index) => (
-              <Link
-                key={name}
-                href={`/properties?category=${encodeURIComponent(name)}`}
-                className={`group min-h-56 border-white/15 p-7 transition hover:bg-white hover:text-[#17362c] ${index < categoryDetails.length - 1 ? 'border-b sm:border-r lg:border-b' : ''}`}
-              >
-                <Icon className="h-7 w-7 text-[#d6b66f]" strokeWidth={1.6} />
-                <h3 className="mt-14 text-lg font-semibold">{name}</h3>
-                <p className="mt-2 max-w-48 text-xs leading-5 text-white/50 transition group-hover:text-[#657069]">{note}</p>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {categoryDetails.map(({ name, label, image }, index) => {
+            const categoryProperties = properties.filter((property) => property.category === name);
+            const availableCount = categoryProperties.filter((property) => property.status === 'Available').length;
+            const displayImage = categoryProperties[0]?.images[0]?.imageUrl ?? image;
+            return (
+              <Link key={name} href={`/properties?category=${encodeURIComponent(name)}`} className={`group relative isolate min-h-64 overflow-hidden rounded-2xl bg-[#dfe3df] ${index === 0 ? 'md:col-span-2 md:row-span-2 md:min-h-[544px]' : ''}`}>
+                <Image src={displayImage} alt={`${label} available through DGR Realty`} fill unoptimized sizes={index === 0 ? '(max-width: 768px) 50vw, 50vw' : '(max-width: 768px) 50vw, 25vw'} className="object-cover transition duration-500 group-hover:scale-[1.035]" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-6">
+                  <h3 className="text-lg font-bold tracking-[-0.02em]">{label}</h3>
+                  <p className="mt-1 text-xs text-white/75">{availableCount} available {availableCount === 1 ? 'listing' : 'listings'}</p>
+                </div>
               </Link>
-            ))}
-            <Link href="/properties" className="group flex min-h-56 flex-col justify-between bg-[#caa75a] p-7 text-[#10271f] transition hover:bg-[#d8bb79]">
-              <ArrowRight className="h-7 w-7 self-end transition group-hover:translate-x-1" />
-              <div><h3 className="text-lg font-bold">Explore everything</h3><p className="mt-2 text-xs leading-5 opacity-70">See the complete DGR Realty collection.</p></div>
-            </Link>
-          </div>
+            );
+          })}
+          <Link href="/properties" className="group flex min-h-64 flex-col justify-between rounded-2xl bg-[#dce9e3] p-6 text-[#173f32] transition hover:bg-[#cee1d8]">
+            <ArrowRight className="h-6 w-6 self-end transition group-hover:translate-x-1" />
+            <div><p className="text-xs font-bold uppercase tracking-[0.12em]">All categories</p><h3 className="mt-2 text-xl font-bold">Explore every opportunity</h3></div>
+          </Link>
         </div>
       </section>
 
-      <section id="properties" className="mx-auto max-w-[1440px] px-6 py-24 sm:px-8 lg:px-12 lg:py-32">
-        <div className="mb-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="eyebrow">Featured collection</p>
-            <h2 className="display mt-4 text-4xl tracking-[-0.035em] sm:text-5xl">Properties worth a closer look.</h2>
+      <section id="properties" className="border-y border-[#e7e9e6] bg-white py-20 lg:py-24">
+        <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
+          <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div><p className="eyebrow">Featured properties</p><h2 className="display mt-3 text-3xl tracking-[-0.04em] sm:text-5xl">Standout places, carefully selected.</h2></div>
+            <Link href="/properties" className="flex items-center gap-2 text-sm font-semibold text-[#24634e]">Browse all <ArrowRight className="h-4 w-4" /></Link>
           </div>
-          <Link href="/properties" className="flex items-center gap-2 text-sm font-semibold text-[#17362c]">See all listings <ArrowRight className="h-4 w-4" /></Link>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {featured.map((property, index) => <PropertyCard key={property.id} property={property} priority={index < 2} />)}
+          {featured.length > 0 ? <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">{featured.map((property, index) => <PropertyCard key={property.id} property={property} priority={index < 2} />)}</div> : <div className="rounded-2xl border border-dashed border-[#d8ddd9] px-6 py-16 text-center text-sm text-[#6d756f]">Featured listings will appear here once they are added.</div>}
         </div>
       </section>
 
-      <section className="border-y border-[#dfe2dc] bg-white py-24 lg:py-28">
-        <div className="mx-auto max-w-[1440px] px-6 sm:px-8 lg:px-12">
-          <div className="mb-10 flex items-end justify-between gap-6">
-            <div><p className="eyebrow">Just listed</p><h2 className="display mt-4 text-4xl tracking-[-0.035em] sm:text-5xl">Fresh opportunities.</h2></div>
-            <Link href="/properties?sort=Newest" className="hidden items-center gap-2 text-sm font-semibold sm:flex">View newest <ArrowRight className="h-4 w-4" /></Link>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {recent.map((property) => <PropertyCard key={property.id} property={property} />)}
-          </div>
-        </div>
+      <section className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
+        <div className="mb-10 flex items-end justify-between gap-6"><div><p className="eyebrow">Recently added</p><h2 className="display mt-3 text-3xl tracking-[-0.04em] sm:text-5xl">New to the market.</h2></div><Link href="/properties?sort=Newest" className="hidden items-center gap-2 text-sm font-semibold text-[#24634e] sm:flex">See newest <ArrowRight className="h-4 w-4" /></Link></div>
+        {recent.length > 0 ? <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">{recent.map((property) => <PropertyCard key={property.id} property={property} />)}</div> : <div className="rounded-2xl border border-dashed border-[#d8ddd9] px-6 py-16 text-center text-sm text-[#6d756f]">New listings will appear here as they are published.</div>}
       </section>
 
-      <section id="contact" className="mx-auto max-w-[1440px] px-6 py-24 sm:px-8 lg:px-12 lg:py-32">
-        <div className="relative isolate overflow-hidden rounded-[30px] bg-[#ded8c8] px-6 py-14 sm:px-10 lg:px-16 lg:py-20">
-          <div className="absolute -right-20 -top-28 h-80 w-80 rounded-full border border-[#17362c]/10" />
-          <div className="absolute -right-4 -top-12 h-52 w-52 rounded-full border border-[#17362c]/10" />
-          <div className="relative grid gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
-            <div>
-              <p className="eyebrow">Ready when you are</p>
-              <h2 className="display mt-4 max-w-3xl text-4xl leading-[1.02] tracking-[-0.04em] sm:text-6xl">Buying, renting, selling, or listing? Let’s talk.</h2>
-              <p className="mt-6 max-w-xl text-sm leading-7 text-[#5f6a64]">Tell us what you are looking for and we will help you take the next clear step.</p>
-            </div>
-            <div className="grid gap-3">
-              <a href="mailto:inquiries@dgrrealty.example" className="flex items-center justify-between rounded-full bg-[#17362c] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#23483b]">Send an inquiry <ArrowRight className="h-4 w-4" /></a>
-              <a href="#" className="flex items-center justify-between rounded-full border border-[#17362c]/30 px-6 py-4 text-sm font-semibold transition hover:bg-white/50">Message us on Facebook <ArrowRight className="h-4 w-4" /></a>
-              <p className="mt-3 flex items-center gap-2 text-xs text-[#657069]"><Check className="h-4 w-4" /> No pressure—just clear, helpful guidance.</p>
+      <section id="about" className="bg-[#eef3ef] py-20 lg:py-24">
+        <div className="mx-auto grid max-w-[1440px] gap-12 px-5 sm:px-8 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:px-12">
+          <div className="relative min-h-[430px] overflow-hidden rounded-3xl bg-[#dfe3df]"><Image src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1400&q=85" alt="Real estate professional presenting a property" fill unoptimized sizes="(max-width: 1024px) 100vw, 48vw" className="object-cover" /></div>
+          <div className="lg:pl-8">
+            <p className="eyebrow">A simpler property search</p>
+            <h2 className="display mt-3 max-w-2xl text-4xl leading-[1.08] tracking-[-0.045em] sm:text-5xl">Clear information. Local context. A direct next step.</h2>
+            <p className="mt-6 max-w-xl text-base leading-8 text-[#606862]">DGR Realty organizes homes, land, rentals, and commercial opportunities into one easy-to-browse marketplace—helping you compare confidently and connect when you are ready.</p>
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              {['Property details that matter', 'Responsive support', 'Listings across key categories', 'Mobile-friendly browsing'].map((item) => <p key={item} className="flex items-center gap-3 text-sm font-medium"><CheckCircle2 className="h-5 w-5 text-[#24634e]" /> {item}</p>)}
             </div>
           </div>
+        </div>
+      </section>
+
+      <section id="contact" className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
+        <div className="grid overflow-hidden rounded-3xl border border-[#e1e5e1] bg-white shadow-[0_18px_55px_rgba(29,39,33,0.07)] lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="bg-[#24634e] p-7 text-white sm:p-10 lg:p-12">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/65">Contact DGR Realty</p>
+            <h2 className="display mt-4 text-4xl leading-tight tracking-[-0.04em]">Let’s find the right next move.</h2>
+            <p className="mt-5 text-sm leading-7 text-white/72">Buying, renting, selling, or listing? Share what you need and we’ll get back to you.</p>
+            <div className="mt-10 space-y-5 text-sm">
+              <p className="flex items-center gap-3"><Phone className="h-5 w-5 text-white/70" /> +63 9XX XXX XXXX</p>
+              <p className="flex items-center gap-3"><Mail className="h-5 w-5 text-white/70" /> inquiries@dgrrealty.example</p>
+              <p className="flex items-center gap-3"><MessageCircle className="h-5 w-5 text-white/70" /> Facebook / Messenger</p>
+            </div>
+            <p className="mt-10 text-xs leading-5 text-white/55">Contact details shown are placeholders and can be configured before launch.</p>
+          </div>
+          <form className="grid gap-4 p-7 sm:grid-cols-2 sm:p-10 lg:p-12">
+            <label><span className="field-label">Name</span><input className="form-field" name="name" placeholder="Your full name" /></label>
+            <label><span className="field-label">Phone or email</span><input className="form-field" name="contact" placeholder="How can we reach you?" /></label>
+            <label><span className="field-label">I am interested in</span><select className="form-field" name="interest"><option>Buying a property</option><option>Renting a property</option><option>Selling a property</option><option>Listing a property</option></select></label>
+            <label><span className="field-label">Preferred location</span><input className="form-field" name="location" placeholder="City or area" /></label>
+            <label className="sm:col-span-2"><span className="field-label">Message</span><textarea className="form-field min-h-32 resize-none" name="message" placeholder="Tell us a little about what you need" /></label>
+            <button type="button" className="flex items-center justify-center gap-2 rounded-xl bg-[#24634e] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#1b4f3e] sm:col-span-2">Send inquiry <ArrowRight className="h-4 w-4" /></button>
+          </form>
         </div>
       </section>
 

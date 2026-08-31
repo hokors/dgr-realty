@@ -22,7 +22,7 @@ function getMetadataBase() {
 export const metadata: Metadata = {
   metadataBase: getMetadataBase(),
   title: {
-    default: 'DGR Realty | Homes, Land & Property in Pampanga',
+    default: 'DGR Realty | Find Your Next Property in Pampanga',
     template: '%s | DGR Realty',
   },
   description:
@@ -30,17 +30,17 @@ export const metadata: Metadata = {
   applicationName: 'DGR Realty',
   keywords: ['Pampanga real estate', 'property for sale', 'property for rent', 'DGR Realty'],
   openGraph: {
-    title: 'DGR Realty | Find your place in Pampanga',
-    description: 'A curated collection of homes, land, rentals, and investment opportunities across Pampanga.',
+    title: 'DGR Realty | Find your next property',
+    description: 'Browse homes, land, rentals, commercial spaces, and investment opportunities across Pampanga.',
     type: 'website',
     siteName: 'DGR Realty',
-    images: [{ url: '/og.png', width: 1536, height: 1024, alt: 'DGR Realty — Find your place in Pampanga.' }],
+    images: [{ url: '/og-marketplace.png', width: 1536, height: 1024, alt: 'DGR Realty - Find your next property.' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'DGR Realty | Find your place in Pampanga',
-    description: 'A curated collection of homes, land, rentals, and investment opportunities across Pampanga.',
-    images: ['/og.png'],
+    title: 'DGR Realty | Find your next property',
+    description: 'Browse homes, land, rentals, commercial spaces, and investment opportunities across Pampanga.',
+    images: ['/og-marketplace.png'],
   },
 };
 

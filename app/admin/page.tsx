@@ -11,9 +11,9 @@ export const metadata: Metadata = {
 
 export default function AdminPage() {
   return (
-    <main className="min-h-screen bg-[#f7f6f1] text-[#17362c]">
+    <main className="min-h-screen bg-[#f8f9f7] text-[#202522]">
       <Header />
-      <section className="border-b border-[#dfe2dc] bg-[#e9e8e1]">
+      <section className="border-b border-[#e4e8e4] bg-white">
         <div className="mx-auto max-w-[1200px] px-6 py-14 sm:px-8 lg:px-12">
           <p className="eyebrow">Private workspace</p>
           <h1 className="display mt-4 text-5xl tracking-[-0.04em]">DGR Realty admin</h1>

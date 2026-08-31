@@ -20,22 +20,24 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
   const location = valueOf(query.location) ?? '';
 
   return (
-    <main className="min-h-screen bg-[#f7f6f1] text-[#17362c]">
+    <main className="min-h-screen bg-[#f8f9f7] text-[#202522]">
       <Header />
-      <section className="border-b border-[#dfe2dc] bg-[#e9e8e1]">
-        <div className="mx-auto max-w-[1440px] px-6 py-16 sm:px-8 lg:px-12 lg:py-20">
-          <p className="eyebrow">DGR Realty collection</p>
-          <h1 className="display mt-4 text-5xl tracking-[-0.04em] sm:text-6xl">Find a property that fits.</h1>
-          <p className="mt-5 max-w-2xl text-sm leading-7 text-[#66716a]">Explore homes, land, rentals, and investment opportunities. Use the filters to narrow the collection around what matters to you.</p>
+      <section className="border-b border-[#e6e9e5] bg-white">
+        <div className="mx-auto max-w-[1440px] px-5 py-12 sm:px-8 lg:px-12 lg:py-14">
+          <p className="eyebrow">Properties</p>
+          <h1 className="display mt-3 text-4xl tracking-[-0.045em] sm:text-5xl">Browse available properties</h1>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-[#68716b]">Compare homes, land, rentals, and commercial opportunities across Pampanga.</p>
         </div>
       </section>
-      <section className="mx-auto max-w-[1440px] px-6 py-12 sm:px-8 lg:px-12 lg:py-16">
+      <section className="mx-auto max-w-[1440px] px-5 py-10 sm:px-8 lg:px-12 lg:py-12">
         <PropertyBrowser
           initialProperties={properties}
           initialFilters={{
             query: valueOf(query.query) ?? location,
             category: valueOf(query.category) ?? 'All',
             listingType: valueOf(query.listingType) ?? 'All',
+            minPrice: valueOf(query.minPrice) ?? '',
+            maxPrice: valueOf(query.maxPrice) ?? '',
             sort: valueOf(query.sort) ?? 'Newest',
           }}
         />
