@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { createAdminSupabaseClient, getAdminSupabaseConfigStatus } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
 
@@ -92,7 +92,13 @@ export async function POST(request: Request) {
 
   const supabase = createAdminSupabaseClient();
   if (!supabase) {
-    return NextResponse.json({ error: 'Inquiry service is not configured yet.' }, { status: 503 });
+    const config = getAdminSupabaseConfigStatus();
+    const missing = [
+      !config.hasUrl ? 'NEXT_PUBLIC_SUPABASE_URL' : null,
+      !config.hasSecret ? 'SUPABASE_SECRET_KEY' : null,
+    ].filter(Boolean);
+    console.error('Inquiry service configuration is incomplete.', { missing });
+    return NextResponse.json({ error: `This deployment is missing ${missing.join(' and ')}.` }, { status: 503 });
   }
 
   const ipAddress = getClientIp(request);
