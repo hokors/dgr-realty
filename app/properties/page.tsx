@@ -23,13 +23,13 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
     <main className="min-h-screen bg-[#f8f9f7] text-[#202522]">
       <Header />
       <section className="border-b border-[#e6e9e5] bg-white">
-        <div className="mx-auto max-w-[1440px] px-5 py-12 sm:px-8 lg:px-12 lg:py-14">
+        <div data-reveal className="mx-auto max-w-[1440px] px-5 py-12 sm:px-8 lg:px-12 lg:py-14">
           <p className="eyebrow">Properties</p>
           <h1 className="display mt-3 text-4xl tracking-[-0.045em] sm:text-5xl">Browse available properties</h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-[#68716b]">Compare homes, land, rentals, and commercial opportunities across Pampanga.</p>
         </div>
       </section>
-      <section className="mx-auto max-w-[1440px] px-5 py-10 sm:px-8 lg:px-12 lg:py-12">
+      <section data-reveal className="mx-auto max-w-[1440px] px-5 py-10 sm:px-8 lg:px-12 lg:py-12">
         <PropertyBrowser
           initialProperties={properties}
           initialFilters={{

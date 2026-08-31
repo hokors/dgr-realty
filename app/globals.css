@@ -71,11 +71,56 @@ button, summary, select { cursor: pointer; }
 .mobile-menu[open] .menu-open { display: none; }
 .mobile-menu[open] .menu-close { display: block; }
 
+.reveal-enabled [data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 42px, 0) scale(0.985);
+  transition:
+    opacity 800ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms),
+    transform 800ms cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0ms),
+    box-shadow 300ms ease;
+  will-change: opacity, transform;
+}
+
+.reveal-enabled [data-reveal='left'] { transform: translate3d(-42px, 0, 0); }
+.reveal-enabled [data-reveal='right'] { transform: translate3d(42px, 0, 0); }
+
+.reveal-enabled [data-reveal].is-revealed {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  will-change: auto;
+}
+
+.reveal-enabled article[data-reveal].is-revealed:hover {
+  transform: translate3d(0, -2px, 0) scale(1);
+}
+
+.hero-media { animation: hero-focus 1400ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.hero-intro > * { animation: hero-rise 750ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.hero-intro > :nth-child(1) { animation-delay: 100ms; }
+.hero-intro > :nth-child(2) { animation-delay: 180ms; }
+.hero-intro > :nth-child(3) { animation-delay: 260ms; }
+.hero-intro > :nth-child(4) { animation-delay: 360ms; }
+
+@keyframes hero-rise {
+  from { opacity: 0; transform: translate3d(0, 24px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes hero-focus {
+  from { opacity: 0.7; transform: scale(1.035); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+
+  [data-reveal], .hero-intro > *, .hero-media {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

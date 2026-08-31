@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { ScrollAnimations } from '@/components/ScrollAnimations';
 import './globals.css';
 
 function getMetadataBase() {
@@ -47,7 +48,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <ScrollAnimations />
+        {children}
+      </body>
     </html>
   );
 }

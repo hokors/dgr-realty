@@ -1,10 +1,6 @@
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 
-type HeaderProps = {
-  overlay?: boolean;
-};
-
 const navigation = [
   ['/', 'Home'],
   ['/properties', 'Properties'],
@@ -16,7 +12,7 @@ const navigation = [
   ['/#contact', 'Contact'],
 ];
 
-export function Header({ overlay: _overlay = false }: HeaderProps) {
+export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-[#e7e9e6] bg-white/95 text-[#202522] backdrop-blur-xl">
       <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-12">

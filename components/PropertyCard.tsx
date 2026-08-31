@@ -23,7 +23,7 @@ export function PropertyCard({ property, priority = false }: PropertyCardProps) 
   ].filter(Boolean) as Array<{ icon: typeof BedDouble; label: string }>;
 
   return (
-    <article className="group overflow-hidden rounded-2xl border border-[#e1e5e1] bg-white transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(29,39,33,0.10)]">
+    <article data-reveal className="group overflow-hidden rounded-2xl border border-[#e1e5e1] bg-white transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(29,39,33,0.10)]">
       <Link href={`/properties/${property.slug}`} className="block h-full" aria-label={`View ${property.title}`}>
         <div className="relative aspect-[4/3] overflow-hidden bg-[#e6e9e6]">
           {mainImage ? (

@@ -6,7 +6,7 @@ const categories = ['House', 'Condominium', 'Lot', 'Raw Land', 'Rentals', 'Comme
 export function Footer() {
   return (
     <footer className="bg-[#202522] text-white">
-      <div className="mx-auto grid max-w-[1440px] gap-12 px-5 py-16 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_1fr_1.1fr] lg:px-12 lg:py-20">
+      <div data-reveal className="mx-auto grid max-w-[1440px] gap-12 px-5 py-16 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_1fr_1.1fr] lg:px-12 lg:py-20">
         <div>
           <Link href="/" className="text-xl font-bold tracking-[-0.04em]">DGR Realty</Link>
           <p className="mt-4 max-w-sm text-sm leading-7 text-white/58">A clear, modern way to browse homes, land, rentals, and investment opportunities across Pampanga.</p>

@@ -49,11 +49,11 @@ export default async function Home() {
           priority
           unoptimized
           sizes="100vw"
-          className="object-cover"
+          className="hero-media object-cover"
         />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,26,23,.72)_0%,rgba(20,26,23,.34)_55%,rgba(20,26,23,.12)_100%)]" />
         <div className="relative mx-auto flex min-h-[650px] max-w-[1440px] items-center px-5 py-16 sm:px-8 lg:min-h-[700px] lg:px-12">
-          <div className="w-full max-w-4xl">
+          <div className="hero-intro w-full max-w-4xl">
             <p className="mb-4 text-xs font-bold uppercase tracking-[0.18em] text-white/75">Property across Pampanga</p>
             <h1 className="display max-w-3xl text-5xl leading-[0.98] tracking-[-0.055em] sm:text-7xl lg:text-[82px]">Find your next property.</h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-white/85 sm:text-lg">Search homes, land, commercial spaces, rentals, and investment opportunities in one trusted place.</p>
@@ -78,7 +78,7 @@ export default async function Home() {
       </section>
 
       <section id="categories" className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
-        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div data-reveal className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div><p className="eyebrow">Browse by property type</p><h2 className="display mt-3 text-3xl tracking-[-0.04em] sm:text-5xl">Start with what fits your plans.</h2></div>
           <Link href="/properties" className="flex items-center gap-2 text-sm font-semibold text-[#24634e] hover:text-[#173f32]">View all properties <ArrowRight className="h-4 w-4" /></Link>
         </div>
@@ -88,7 +88,7 @@ export default async function Home() {
             const availableCount = categoryProperties.filter((property) => property.status === 'Available').length;
             const displayImage = categoryProperties[0]?.images[0]?.imageUrl ?? image;
             return (
-              <Link key={name} href={`/properties?category=${encodeURIComponent(name)}`} className={`group relative isolate min-h-64 overflow-hidden rounded-2xl bg-[#dfe3df] ${index === 0 ? 'md:col-span-2 md:row-span-2 md:min-h-[544px]' : ''}`}>
+              <Link data-reveal key={name} href={`/properties?category=${encodeURIComponent(name)}`} className={`group relative isolate min-h-64 overflow-hidden rounded-2xl bg-[#dfe3df] ${index === 0 ? 'md:col-span-2 md:row-span-2 md:min-h-[544px]' : ''}`}>
                 <Image src={displayImage} alt={`${label} available through DGR Realty`} fill unoptimized sizes={index === 0 ? '(max-width: 768px) 50vw, 50vw' : '(max-width: 768px) 50vw, 25vw'} className="object-cover transition duration-500 group-hover:scale-[1.035]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-6">
@@ -98,7 +98,7 @@ export default async function Home() {
               </Link>
             );
           })}
-          <Link href="/properties" className="group flex min-h-64 flex-col justify-between rounded-2xl bg-[#dce9e3] p-6 text-[#173f32] transition hover:bg-[#cee1d8]">
+          <Link data-reveal href="/properties" className="group flex min-h-64 flex-col justify-between rounded-2xl bg-[#dce9e3] p-6 text-[#173f32] transition hover:bg-[#cee1d8]">
             <ArrowRight className="h-6 w-6 self-end transition group-hover:translate-x-1" />
             <div><p className="text-xs font-bold uppercase tracking-[0.12em]">All categories</p><h3 className="mt-2 text-xl font-bold">Explore every opportunity</h3></div>
           </Link>
@@ -107,7 +107,7 @@ export default async function Home() {
 
       <section id="properties" className="border-y border-[#e7e9e6] bg-white py-20 lg:py-24">
         <div className="mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
-          <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div data-reveal className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div><p className="eyebrow">Featured properties</p><h2 className="display mt-3 text-3xl tracking-[-0.04em] sm:text-5xl">Standout places, carefully selected.</h2></div>
             <Link href="/properties" className="flex items-center gap-2 text-sm font-semibold text-[#24634e]">Browse all <ArrowRight className="h-4 w-4" /></Link>
           </div>
@@ -116,14 +116,14 @@ export default async function Home() {
       </section>
 
       <section className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
-        <div className="mb-10 flex items-end justify-between gap-6"><div><p className="eyebrow">Recently added</p><h2 className="display mt-3 text-3xl tracking-[-0.04em] sm:text-5xl">New to the market.</h2></div><Link href="/properties?sort=Newest" className="hidden items-center gap-2 text-sm font-semibold text-[#24634e] sm:flex">See newest <ArrowRight className="h-4 w-4" /></Link></div>
+        <div data-reveal className="mb-10 flex items-end justify-between gap-6"><div><p className="eyebrow">Recently added</p><h2 className="display mt-3 text-3xl tracking-[-0.04em] sm:text-5xl">New to the market.</h2></div><Link href="/properties?sort=Newest" className="hidden items-center gap-2 text-sm font-semibold text-[#24634e] sm:flex">See newest <ArrowRight className="h-4 w-4" /></Link></div>
         {recent.length > 0 ? <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">{recent.map((property) => <PropertyCard key={property.id} property={property} />)}</div> : <div className="rounded-2xl border border-dashed border-[#d8ddd9] px-6 py-16 text-center text-sm text-[#6d756f]">New listings will appear here as they are published.</div>}
       </section>
 
       <section id="about" className="bg-[#eef3ef] py-20 lg:py-24">
         <div className="mx-auto grid max-w-[1440px] gap-12 px-5 sm:px-8 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:px-12">
-          <div className="relative min-h-[430px] overflow-hidden rounded-3xl bg-[#dfe3df]"><Image src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1400&q=85" alt="Real estate professional presenting a property" fill unoptimized sizes="(max-width: 1024px) 100vw, 48vw" className="object-cover" /></div>
-          <div className="lg:pl-8">
+          <div data-reveal="left" className="relative min-h-[430px] overflow-hidden rounded-3xl bg-[#dfe3df]"><Image src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1400&q=85" alt="Real estate professional presenting a property" fill unoptimized sizes="(max-width: 1024px) 100vw, 48vw" className="object-cover" /></div>
+          <div data-reveal="right" className="lg:pl-8">
             <p className="eyebrow">A simpler property search</p>
             <h2 className="display mt-3 max-w-2xl text-4xl leading-[1.08] tracking-[-0.045em] sm:text-5xl">Clear information. Local context. A direct next step.</h2>
             <p className="mt-6 max-w-xl text-base leading-8 text-[#606862]">DGR Realty organizes homes, land, rentals, and commercial opportunities into one easy-to-browse marketplace—helping you compare confidently and connect when you are ready.</p>
@@ -135,7 +135,7 @@ export default async function Home() {
       </section>
 
       <section id="contact" className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
-        <div className="grid overflow-hidden rounded-3xl border border-[#e1e5e1] bg-white shadow-[0_18px_55px_rgba(29,39,33,0.07)] lg:grid-cols-[0.9fr_1.1fr]">
+        <div data-reveal className="grid overflow-hidden rounded-3xl border border-[#e1e5e1] bg-white shadow-[0_18px_55px_rgba(29,39,33,0.07)] lg:grid-cols-[0.9fr_1.1fr]">
           <div className="bg-[#24634e] p-7 text-white sm:p-10 lg:p-12">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/65">Contact DGR Realty</p>
             <h2 className="display mt-4 text-4xl leading-tight tracking-[-0.04em]">Let’s find the right next move.</h2>
