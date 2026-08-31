@@ -1,13 +1,24 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Script from 'next/script';
 import { ArrowRight, CheckCircle2, LoaderCircle, Mail } from 'lucide-react';
 
 declare global {
   interface Window {
-    turnstile?: { reset: () => void };
+    turnstile?: {
+      ready: (callback: () => void) => void;
+      render: (container: HTMLElement, options: {
+        sitekey: string;
+        theme: 'light';
+        action: string;
+        'response-field': boolean;
+        'response-field-name': string;
+      }) => string;
+      reset: (widgetId: string) => void;
+      remove: (widgetId: string) => void;
+    };
   }
 }
 
@@ -23,7 +34,43 @@ export function InquiryForm({ source, propertyId, propertyTitle, variant = 'home
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [startedAt, setStartedAt] = useState(() => Date.now());
+  const [turnstileReady, setTurnstileReady] = useState(false);
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+  const turnstileWidgetIdRef = useRef<string | null>(null);
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+  useEffect(() => {
+    if (!turnstileSiteKey || !turnstileReady || success) return;
+
+    let cancelled = false;
+    const turnstile = window.turnstile;
+    const container = turnstileContainerRef.current;
+    if (!turnstile || !container || turnstileWidgetIdRef.current) return;
+
+    turnstile.ready(() => {
+      if (cancelled || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return;
+      turnstileWidgetIdRef.current = turnstile.render(turnstileContainerRef.current, {
+        sitekey: turnstileSiteKey,
+        theme: 'light',
+        action: 'inquiry',
+        'response-field': true,
+        'response-field-name': 'cf-turnstile-response',
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      const widgetId = turnstileWidgetIdRef.current;
+      if (widgetId) {
+        try {
+          turnstile.remove(widgetId);
+        } catch {
+          // The provider may already have removed the iframe during navigation.
+        }
+        turnstileWidgetIdRef.current = null;
+      }
+    };
+  }, [success, turnstileReady, turnstileSiteKey]);
 
   async function submitInquiry(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,7 +106,16 @@ export function InquiryForm({ source, propertyId, propertyTitle, variant = 'home
       setStartedAt(Date.now());
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : 'Unable to send your inquiry.');
-      window.turnstile?.reset();
+      const widgetId = turnstileWidgetIdRef.current;
+      if (widgetId) {
+        try {
+          window.turnstile?.reset(widgetId);
+        } catch {
+          turnstileWidgetIdRef.current = null;
+          setTurnstileReady(false);
+          window.setTimeout(() => setTurnstileReady(true), 0);
+        }
+      }
     } finally {
       setSubmitting(false);
     }
@@ -77,7 +133,7 @@ export function InquiryForm({ source, propertyId, propertyTitle, variant = 'home
 
   return (
     <form onSubmit={submitInquiry} className={gridClass}>
-      {turnstileSiteKey && <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" />}
+      {turnstileSiteKey && <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" onReady={() => setTurnstileReady(true)} />}
       <input type="hidden" name="startedAt" value={startedAt} />
       <label className="absolute -left-[10000px] top-auto h-px w-px overflow-hidden" aria-hidden="true">Company website<input name="website" tabIndex={-1} autoComplete="off" /></label>
 
@@ -96,7 +152,7 @@ export function InquiryForm({ source, propertyId, propertyTitle, variant = 'home
 
       <label className={`flex items-start gap-3 rounded-xl bg-[#f4f7f5] p-3.5 ${variant === 'home' ? 'sm:col-span-2' : ''}`}><input required name="consent" type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-[#24634e]" /><span className="text-[11px] leading-5 text-[#66716a]">I agree that DGR Realty may use my details to respond to this inquiry, as described in the <Link href="/privacy" className="font-bold text-[#24634e] underline underline-offset-2">Privacy Notice</Link>.</span></label>
 
-      {turnstileSiteKey && <div className={`cf-turnstile ${variant === 'home' ? 'sm:col-span-2' : ''}`} data-sitekey={turnstileSiteKey} data-theme="light" data-action="inquiry" />}
+      {turnstileSiteKey && <div ref={turnstileContainerRef} className={variant === 'home' ? 'sm:col-span-2' : ''} />}
       {error && <p className={`rounded-xl bg-[#fae8e6] px-4 py-3 text-sm text-[#923f38] ${variant === 'home' ? 'sm:col-span-2' : ''}`} role="alert">{error}</p>}
 
       <button disabled={submitting} className={`flex items-center justify-center gap-2 rounded-xl bg-[#24634e] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#1b4f3e] disabled:cursor-not-allowed disabled:opacity-60 ${variant === 'home' ? 'sm:col-span-2' : 'w-full'}`}>
