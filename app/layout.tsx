@@ -1,13 +1,26 @@
 import type { Metadata } from 'next';
 import './globals.css';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
-  ?? (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : 'http://localhost:3000');
+function getMetadataBase() {
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  const fallbackUrl = vercelHost ? `https://${vercelHost}` : 'http://localhost:3000';
+
+  if (!configuredUrl) return new URL(fallbackUrl);
+
+  try {
+    return new URL(
+      configuredUrl.startsWith('http://') || configuredUrl.startsWith('https://')
+        ? configuredUrl
+        : `https://${configuredUrl}`,
+    );
+  } catch {
+    return new URL(fallbackUrl);
+  }
+}
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: getMetadataBase(),
   title: {
     default: 'DGR Realty | Homes, Land & Property in Pampanga',
     template: '%s | DGR Realty',

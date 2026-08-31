@@ -19,6 +19,10 @@ import { PropertyCard } from '@/components/PropertyCard';
 import { propertyCategories } from '@/data/sample-properties';
 import { getProperties } from '@/lib/properties';
 
+// Property data comes from Supabase when configured. Render at request time so
+// deployments never depend on an external database during the build step.
+export const dynamic = 'force-dynamic';
+
 const categoryDetails = [
   { name: 'House', note: 'Family homes and private residences', icon: House },
   { name: 'Condominium', note: 'Easy city living and investments', icon: Building2 },

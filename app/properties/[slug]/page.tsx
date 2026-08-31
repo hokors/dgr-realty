@@ -19,14 +19,12 @@ import {
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { formatArea, formatDate, formatPrice } from '@/lib/format';
-import { getProperties, getPropertyBySlug } from '@/lib/properties';
+import { getPropertyBySlug } from '@/lib/properties';
 
 type PropertyPageProps = { params: Promise<{ slug: string }> };
 
-export async function generateStaticParams() {
-  const properties = await getProperties();
-  return properties.map(({ slug }) => ({ slug }));
-}
+// Avoid querying Supabase while Vercel is collecting build-time page data.
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: PropertyPageProps): Promise<Metadata> {
   const { slug } = await params;
