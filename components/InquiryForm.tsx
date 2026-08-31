@@ -8,7 +8,6 @@ import { ArrowRight, CheckCircle2, LoaderCircle, Mail } from 'lucide-react';
 declare global {
   interface Window {
     turnstile?: {
-      ready: (callback: () => void) => void;
       render: (container: HTMLElement, options: {
         sitekey: string;
         theme: 'light';
@@ -42,24 +41,19 @@ export function InquiryForm({ source, propertyId, propertyTitle, variant = 'home
   useEffect(() => {
     if (!turnstileSiteKey || !turnstileReady || success) return;
 
-    let cancelled = false;
     const turnstile = window.turnstile;
     const container = turnstileContainerRef.current;
-    if (!turnstile || !container || turnstileWidgetIdRef.current) return;
+    if (!turnstile || typeof turnstile.render !== 'function' || !container || turnstileWidgetIdRef.current) return;
 
-    turnstile.ready(() => {
-      if (cancelled || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return;
-      turnstileWidgetIdRef.current = turnstile.render(turnstileContainerRef.current, {
-        sitekey: turnstileSiteKey,
-        theme: 'light',
-        action: 'inquiry',
-        'response-field': true,
-        'response-field-name': 'cf-turnstile-response',
-      });
+    turnstileWidgetIdRef.current = turnstile.render(container, {
+      sitekey: turnstileSiteKey,
+      theme: 'light',
+      action: 'inquiry',
+      'response-field': true,
+      'response-field-name': 'cf-turnstile-response',
     });
 
     return () => {
-      cancelled = true;
       const widgetId = turnstileWidgetIdRef.current;
       if (widgetId) {
         try {
