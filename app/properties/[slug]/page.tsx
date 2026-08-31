@@ -18,7 +18,9 @@ import {
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
+import { InquiryForm } from '@/components/InquiryForm';
 import { PropertyGallery } from '@/components/PropertyGallery';
+import { getPublicContactDetails } from '@/lib/contact';
 import { formatArea, formatDate, formatPrice } from '@/lib/format';
 import { getPropertyBySlug } from '@/lib/properties';
 
@@ -47,6 +49,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
   const { slug } = await params;
   const property = await getPropertyBySlug(slug);
   if (!property) notFound();
+  const contact = getPublicContactDetails();
 
   const specs = [
     property.bedrooms != null ? { icon: BedDouble, value: property.bedrooms, label: 'Bedrooms' } : null,
@@ -131,19 +134,14 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
           <aside data-reveal="right" id="inquiry" className="rounded-2xl border border-[#dde2de] bg-white p-6 shadow-[0_16px_44px_rgba(29,39,33,0.09)] lg:sticky lg:top-24 sm:p-7">
             <h2 className="text-xl font-bold tracking-[-0.025em]">Interested in this property?</h2>
             <p className="mt-3 text-sm leading-6 text-[#68716b]">Ask about availability, request details, or schedule a viewing with DGR Realty.</p>
-            <form className="mt-6 space-y-3">
-              <label className="block"><span className="sr-only">Full name</span><input required name="name" placeholder="Full name" className="form-field" /></label>
-              <label className="block"><span className="sr-only">Phone or email</span><input required name="contact" placeholder="Phone or email" className="form-field" /></label>
-              <label className="block"><span className="sr-only">Message</span><textarea name="message" rows={3} defaultValue={`I'm interested in ${property.title}.`} className="form-field resize-none" /></label>
-              <button type="button" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#24634e] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#1b4f3e]"><Mail className="h-4 w-4" /> Send inquiry</button>
-            </form>
-            <div className="my-5 h-px bg-[#edf0ed]" />
+            <InquiryForm source="property" variant="property" propertyId={property.id} propertyTitle={property.title} />
+            {(contact.phoneHref || contact.emailHref || contact.facebookUrl || contact.messengerUrl) && <div className="my-5 h-px bg-[#edf0ed]" />}
             <div className="grid gap-2.5">
-              <button type="button" className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dce1dd] px-5 py-3 text-sm font-semibold hover:bg-[#f4f6f4]"><Phone className="h-4 w-4" /> Call / contact agent</button>
-              <a href="#" className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dce1dd] px-5 py-3 text-sm font-semibold hover:bg-[#f4f6f4]"><MessageCircle className="h-4 w-4" /> Message on Facebook</a>
-              <a href="#" className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dce1dd] px-5 py-3 text-sm font-semibold hover:bg-[#f4f6f4]"><MessageCircle className="h-4 w-4" /> Messenger</a>
+              {contact.phoneHref && <a href={contact.phoneHref} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dce1dd] px-5 py-3 text-sm font-semibold hover:bg-[#f4f6f4]"><Phone className="h-4 w-4" /> Call DGR Realty</a>}
+              {contact.emailHref && <a href={contact.emailHref} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dce1dd] px-5 py-3 text-sm font-semibold hover:bg-[#f4f6f4]"><Mail className="h-4 w-4" /> Email DGR Realty</a>}
+              {contact.facebookUrl && <a href={contact.facebookUrl} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dce1dd] px-5 py-3 text-sm font-semibold hover:bg-[#f4f6f4]"><MessageCircle className="h-4 w-4" /> Message on Facebook</a>}
+              {contact.messengerUrl && <a href={contact.messengerUrl} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dce1dd] px-5 py-3 text-sm font-semibold hover:bg-[#f4f6f4]"><MessageCircle className="h-4 w-4" /> Messenger</a>}
             </div>
-            <p className="mt-5 text-center text-[11px] leading-5 text-[#8a918d]">Contact details and social links are configurable placeholders.</p>
           </aside>
         </div>
       </div>

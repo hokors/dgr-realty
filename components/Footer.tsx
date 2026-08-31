@@ -1,9 +1,12 @@
 import Link from 'next/link';
 import { Mail, MessageCircle, Phone } from 'lucide-react';
+import { getPublicContactDetails } from '@/lib/contact';
 
 const categories = ['House', 'Condominium', 'Lot', 'Raw Land', 'Rentals', 'Commercial', 'Farm Lot'];
 
 export function Footer() {
+  const contact = getPublicContactDetails();
+
   return (
     <footer className="bg-[#202522] text-white">
       <div data-reveal className="mx-auto grid max-w-[1440px] gap-12 px-5 py-16 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_1fr_1.1fr] lg:px-12 lg:py-20">
@@ -23,17 +26,18 @@ export function Footer() {
         <div>
           <p className="mb-5 text-xs font-bold uppercase tracking-[0.12em] text-white/45">Contact</p>
           <div className="grid gap-4 text-sm text-white/68">
-            <span className="flex items-center gap-2.5"><Phone className="h-4 w-4" /> +63 9XX XXX XXXX</span>
-            <span className="flex items-center gap-2.5"><Mail className="h-4 w-4" /> inquiries@dgrrealty.example</span>
-            <a href="#" className="flex items-center gap-2.5"><MessageCircle className="h-4 w-4" /> Facebook</a>
-            <a href="#" className="flex items-center gap-2.5"><MessageCircle className="h-4 w-4" /> Messenger</a>
+            {contact.phone && contact.phoneHref && <a href={contact.phoneHref} className="flex items-center gap-2.5 transition hover:text-white"><Phone className="h-4 w-4" /> {contact.phone}</a>}
+            {contact.email && contact.emailHref && <a href={contact.emailHref} className="flex items-center gap-2.5 transition hover:text-white"><Mail className="h-4 w-4" /> {contact.email}</a>}
+            {contact.facebookUrl && <a href={contact.facebookUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2.5 transition hover:text-white"><MessageCircle className="h-4 w-4" /> Facebook</a>}
+            {contact.messengerUrl && <a href={contact.messengerUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2.5 transition hover:text-white"><MessageCircle className="h-4 w-4" /> Messenger</a>}
+            {!contact.phone && !contact.email && !contact.facebookUrl && !contact.messengerUrl && <Link href="/#contact" className="font-semibold text-white/80 transition hover:text-white">Send an inquiry</Link>}
           </div>
         </div>
       </div>
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-5 py-6 text-xs text-white/38 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
           <span>Copyright {new Date().getFullYear()} DGR Realty. All rights reserved.</span>
-          <span>Equal Housing Opportunity</span>
+          <span className="flex items-center gap-4"><Link href="/privacy" className="transition hover:text-white/70">Privacy</Link><span>Equal Housing Opportunity</span></span>
         </div>
       </div>
     </footer>

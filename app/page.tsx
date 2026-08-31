@@ -11,8 +11,10 @@ import {
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
+import { InquiryForm } from '@/components/InquiryForm';
 import { PropertyCard } from '@/components/PropertyCard';
 import { propertyCategories } from '@/data/sample-properties';
+import { getPublicContactDetails } from '@/lib/contact';
 import { getProperties } from '@/lib/properties';
 
 // Property data comes from Supabase when configured. Render at request time so
@@ -31,6 +33,7 @@ const categoryDetails = [
 
 export default async function Home() {
   const properties = await getProperties();
+  const contact = getPublicContactDetails();
   const selectedFeatured = properties.filter((property) => property.featured);
   const featured = (selectedFeatured.length > 0 ? selectedFeatured : properties).slice(0, 3);
   const recent = [...properties]
@@ -141,20 +144,14 @@ export default async function Home() {
             <h2 className="display mt-4 text-4xl leading-tight tracking-[-0.04em]">Let’s find the right next move.</h2>
             <p className="mt-5 text-sm leading-7 text-white/72">Buying, renting, selling, or listing? Share what you need and we’ll get back to you.</p>
             <div className="mt-10 space-y-5 text-sm">
-              <p className="flex items-center gap-3"><Phone className="h-5 w-5 text-white/70" /> +63 9XX XXX XXXX</p>
-              <p className="flex items-center gap-3"><Mail className="h-5 w-5 text-white/70" /> inquiries@dgrrealty.example</p>
-              <p className="flex items-center gap-3"><MessageCircle className="h-5 w-5 text-white/70" /> Facebook / Messenger</p>
+              {contact.phone && contact.phoneHref && <a href={contact.phoneHref} className="flex items-center gap-3 transition hover:text-white/75"><Phone className="h-5 w-5 text-white/70" /> {contact.phone}</a>}
+              {contact.email && contact.emailHref && <a href={contact.emailHref} className="flex items-center gap-3 transition hover:text-white/75"><Mail className="h-5 w-5 text-white/70" /> {contact.email}</a>}
+              {contact.facebookUrl && <a href={contact.facebookUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 transition hover:text-white/75"><MessageCircle className="h-5 w-5 text-white/70" /> Facebook</a>}
+              {contact.messengerUrl && <a href={contact.messengerUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 transition hover:text-white/75"><MessageCircle className="h-5 w-5 text-white/70" /> Messenger</a>}
             </div>
-            <p className="mt-10 text-xs leading-5 text-white/55">Contact details shown are placeholders and can be configured before launch.</p>
+            {!contact.phone && !contact.email && !contact.facebookUrl && !contact.messengerUrl && <p className="mt-10 text-xs leading-5 text-white/60">Use the secure inquiry form and our team will respond using the details you provide.</p>}
           </div>
-          <form className="grid gap-4 p-7 sm:grid-cols-2 sm:p-10 lg:p-12">
-            <label><span className="field-label">Name</span><input className="form-field" name="name" placeholder="Your full name" /></label>
-            <label><span className="field-label">Phone or email</span><input className="form-field" name="contact" placeholder="How can we reach you?" /></label>
-            <label><span className="field-label">I am interested in</span><select className="form-field" name="interest"><option>Buying a property</option><option>Renting a property</option><option>Selling a property</option><option>Listing a property</option></select></label>
-            <label><span className="field-label">Preferred location</span><input className="form-field" name="location" placeholder="City or area" /></label>
-            <label className="sm:col-span-2"><span className="field-label">Message</span><textarea className="form-field min-h-32 resize-none" name="message" placeholder="Tell us a little about what you need" /></label>
-            <button type="button" className="flex items-center justify-center gap-2 rounded-xl bg-[#24634e] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#1b4f3e] sm:col-span-2">Send inquiry <ArrowRight className="h-4 w-4" /></button>
-          </form>
+          <InquiryForm source="homepage" variant="home" />
         </div>
       </section>
 

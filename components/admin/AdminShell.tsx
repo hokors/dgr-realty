@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Building2, ExternalLink, Gauge, Home, Plus } from 'lucide-react';
+import { Building2, ExternalLink, Gauge, Home, Mail, Plus } from 'lucide-react';
 import { SignOutButton } from '@/components/admin/SignOutButton';
 
 const navigation = [
   { href: '/admin', label: 'Dashboard', icon: Gauge },
   { href: '/admin/properties', label: 'Properties', icon: Building2 },
   { href: '/admin/properties/new', label: 'Add property', icon: Plus },
+  { href: '/admin/inquiries', label: 'Inquiries', icon: Mail },
 ];
 
 export function AdminShell({ children, email }: { children: ReactNode; email: string }) {
