@@ -12,39 +12,10 @@ type ExistingImageItem = { kind: 'existing'; key: string; image: AdminImage; pre
 type NewImageItem = { kind: 'new'; key: string; file: File; previewUrl: string };
 type ImageItem = ExistingImageItem | NewImageItem;
 
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-    .slice(0, 80) || 'property';
-}
-
 function optionalNumber(value: FormDataEntryValue | null) {
   if (value === null || String(value).trim() === '') return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
-}
-
-async function createUniqueSlug(title: string) {
-  const supabase = createBrowserSupabaseClient();
-  if (!supabase) throw new Error('Supabase is not configured.');
-  const base = slugify(title);
-  const { data, error } = await supabase.from('properties').select('slug').like('slug', `${base}%`);
-  if (error) throw error;
-  const existing = new Set((data ?? []).map((row) => row.slug as string));
-  if (!existing.has(base)) return base;
-  let suffix = 2;
-  while (existing.has(`${base}-${suffix}`)) suffix += 1;
-  return `${base}-${suffix}`;
-}
-
-function safeFileName(name: string) {
-  const extension = name.includes('.') ? `.${name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '';
-  const base = name.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 60) || 'property-photo';
-  return `${base}${extension}`;
 }
 
 export function PropertyForm({ categories, initialProperty }: { categories: AdminCategory[]; initialProperty?: AdminProperty }) {
@@ -54,7 +25,7 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
     .sort((a, b) => a.display_order - b.display_order)
     .map((image) => ({ kind: 'existing', key: image.id, image, previewUrl: image.image_url })), [initialProperty]);
   const [images, setImages] = useState<ImageItem[]>(initialImages);
-  const [removedImages, setRemovedImages] = useState<AdminImage[]>([]);
+  const [operationId] = useState(() => crypto.randomUUID());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -63,7 +34,14 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
 
   function addImages(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
-    const accepted = files.filter((file) => file.type.startsWith('image/'));
+    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+    const accepted = files.filter((file) => allowedTypes.has(file.type) && file.size > 0 && file.size <= 10 * 1024 * 1024);
+    if (accepted.length !== files.length) setError('Use JPG, PNG, WebP, or AVIF images no larger than 10 MB.');
+    if (images.length + accepted.length > 30) {
+      setError('A property can have at most 30 photos.');
+      event.target.value = '';
+      return;
+    }
     setImages((current) => [
       ...current,
       ...accepted.map<NewImageItem>((file) => ({ kind: 'new', key: `new-${crypto.randomUUID()}`, file, previewUrl: URL.createObjectURL(file) })),
@@ -84,72 +62,39 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
   function removeImage(index: number) {
     setImages((current) => {
       const item = current[index];
-      if (item.kind === 'existing') setRemovedImages((removed) => [...removed, item.image]);
-      else URL.revokeObjectURL(item.previewUrl);
+      if (item.kind === 'new') URL.revokeObjectURL(item.previewUrl);
       return current.filter((_, itemIndex) => itemIndex !== index);
     });
   }
 
-  async function saveAmenities(propertyId: string, rawAmenities: string) {
+  async function stageNewImages() {
     const supabase = createBrowserSupabaseClient();
     if (!supabase) throw new Error('Supabase is not configured.');
-    const names = Array.from(new Set(rawAmenities.split(/[,\n]/).map((item) => item.trim()).filter(Boolean)));
-    const { error: clearError } = await supabase.from('property_amenities').delete().eq('property_id', propertyId);
-    if (clearError) throw clearError;
-    if (names.length === 0) return;
-
-    const amenityRows = names.map((name) => ({ name, slug: slugify(name) }));
-    const { error: amenityError } = await supabase.from('amenities').upsert(amenityRows, { onConflict: 'slug', ignoreDuplicates: true });
-    if (amenityError) throw amenityError;
-    const { data: savedAmenities, error: loadError } = await supabase.from('amenities').select('id, slug').in('slug', amenityRows.map((row) => row.slug));
-    if (loadError) throw loadError;
-    const { error: linkError } = await supabase.from('property_amenities').insert((savedAmenities ?? []).map((amenity) => ({ property_id: propertyId, amenity_id: amenity.id })));
-    if (linkError) throw linkError;
-  }
-
-  async function saveImages(propertyId: string, title: string) {
-    const supabase = createBrowserSupabaseClient();
-    if (!supabase) throw new Error('Supabase is not configured.');
-
-    const removedPaths = removedImages.map((image) => image.storage_path).filter((path): path is string => Boolean(path));
-    if (removedPaths.length > 0) {
-      const { error: storageError } = await supabase.storage.from('property-images').remove(removedPaths);
-      if (storageError) throw storageError;
-    }
-    if (removedImages.length > 0) {
-      const { error: deleteError } = await supabase.from('property_images').delete().in('id', removedImages.map((image) => image.id));
-      if (deleteError) throw deleteError;
-    }
-
-    const existing = images.filter((item): item is ExistingImageItem => item.kind === 'existing');
-    for (let index = 0; index < existing.length; index += 1) {
-      const { error: temporaryOrderError } = await supabase.from('property_images').update({ display_order: -(index + 1) }).eq('id', existing[index].image.id);
-      if (temporaryOrderError) throw temporaryOrderError;
-    }
-
-    for (let index = 0; index < images.length; index += 1) {
-      const item = images[index];
-      if (item.kind === 'existing') {
-        const { error: orderError } = await supabase.from('property_images').update({ display_order: index, alt_text: item.image.alt_text || title }).eq('id', item.image.id);
-        if (orderError) throw orderError;
-        continue;
+    const stagedByKey = new Map<string, string>();
+    const stagedPaths: string[] = [];
+    try {
+      for (const item of images) {
+        if (item.kind !== 'new') continue;
+        const prepareResponse = await fetch('/api/admin/property-images/stage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ draftId: operationId, name: item.file.name, type: item.file.type, size: item.file.size }),
+        });
+        const prepared = await prepareResponse.json() as { path?: string; token?: string; error?: string };
+        if (!prepareResponse.ok || !prepared.path || !prepared.token) throw new Error(prepared.error ?? 'Unable to prepare an image upload.');
+        stagedPaths.push(prepared.path);
+        const { error: uploadError } = await supabase.storage.from('property-images').uploadToSignedUrl(prepared.path, prepared.token, item.file, { contentType: item.file.type });
+        if (uploadError) throw uploadError;
+        stagedByKey.set(item.key, prepared.path);
       }
-
-      const path = `${propertyId}/${crypto.randomUUID()}-${safeFileName(item.file.name)}`;
-      const { error: uploadError } = await supabase.storage.from('property-images').upload(path, item.file, { contentType: item.file.type, upsert: false });
-      if (uploadError) throw uploadError;
-      const { data: publicImage } = supabase.storage.from('property-images').getPublicUrl(path);
-      const { error: imageError } = await supabase.from('property_images').insert({
-        property_id: propertyId,
-        image_url: publicImage.publicUrl,
-        storage_path: path,
-        display_order: index,
-        alt_text: title,
-      });
-      if (imageError) {
-        await supabase.storage.from('property-images').remove([path]);
-        throw imageError;
-      }
+      return { stagedByKey, stagedPaths };
+    } catch (stageError) {
+      await fetch('/api/admin/property-images/stage', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paths: stagedPaths }),
+      }).catch(() => undefined);
+      throw stageError;
     }
   }
 
@@ -158,51 +103,59 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
     setSaving(true);
     setError('');
 
+    let stagedPaths: string[] = [];
     try {
-      const supabase = createBrowserSupabaseClient();
-      if (!supabase) throw new Error('Supabase environment variables are not configured.');
-      const { data: authData } = await supabase.auth.getUser();
-      if (!authData.user) throw new Error('Your session expired. Please sign in again.');
-
       const form = new FormData(event.currentTarget);
       const title = String(form.get('title') ?? '').trim();
-      const slug = initialProperty?.slug ?? await createUniqueSlug(title);
-      const payload = {
+      const { stagedByKey, stagedPaths: uploadedPaths } = await stageNewImages();
+      stagedPaths = uploadedPaths;
+      const property = {
         title,
-        slug,
         description: String(form.get('description') ?? '').trim(),
-        category_id: String(form.get('category_id') ?? ''),
-        listing_type: String(form.get('listing_type') ?? 'For Sale'),
+        categoryId: String(form.get('category_id') ?? ''),
+        listingType: String(form.get('listing_type') ?? 'For Sale'),
         price: Number(form.get('price') ?? 0),
-        price_suffix: String(form.get('price_suffix') ?? '').trim() || null,
+        priceSuffix: String(form.get('price_suffix') ?? '').trim() || null,
         location: String(form.get('location') ?? '').trim(),
         city: String(form.get('city') ?? '').trim(),
         province: String(form.get('province') ?? '').trim(),
         bedrooms: optionalNumber(form.get('bedrooms')),
         bathrooms: optionalNumber(form.get('bathrooms')),
-        parking_spaces: optionalNumber(form.get('parking_spaces')),
-        lot_area: optionalNumber(form.get('lot_area')),
-        floor_area: optionalNumber(form.get('floor_area')),
+        parkingSpaces: optionalNumber(form.get('parking_spaces')),
+        lotArea: optionalNumber(form.get('lot_area')),
+        floorArea: optionalNumber(form.get('floor_area')),
         status: String(form.get('status') ?? 'Available'),
         featured: form.get('featured') === 'on',
       };
+      const amenitiesList = Array.from(new Set(String(form.get('amenities') ?? '').split(/[,\n]/).map((item) => item.trim()).filter(Boolean)));
+      const imageManifest = images.map((item) => item.kind === 'existing'
+        ? { kind: 'existing', id: item.image.id }
+        : { kind: 'staged', path: stagedByKey.get(item.key) });
 
-      let propertyId = initialProperty?.id;
-      if (propertyId) {
-        const { error: updateError } = await supabase.from('properties').update(payload).eq('id', propertyId);
-        if (updateError) throw updateError;
-      } else {
-        const { data: inserted, error: insertError } = await supabase.from('properties').insert({ ...payload, created_by: authData.user.id }).select('id').single();
-        if (insertError || !inserted) throw insertError ?? new Error('Unable to create the property.');
-        propertyId = inserted.id;
-      }
-
-      if (!propertyId) throw new Error('Unable to identify the saved property.');
-      await saveAmenities(propertyId, String(form.get('amenities') ?? ''));
-      await saveImages(propertyId, title);
+      const response = await fetch('/api/admin/properties', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operationId,
+          propertyId: initialProperty?.id,
+          create: !initialProperty,
+          property,
+          amenities: amenitiesList,
+          images: imageManifest,
+        }),
+      });
+      const result = await response.json() as { success?: boolean; error?: string };
+      if (!response.ok || !result.success) throw new Error(result.error ?? 'Unable to save this property.');
       router.push('/admin/properties');
       router.refresh();
     } catch (saveError) {
+      if (stagedPaths.length > 0) {
+        await fetch('/api/admin/property-images/stage', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paths: stagedPaths }),
+        }).catch(() => undefined);
+      }
       setError(saveError instanceof Error ? saveError.message : 'Unable to save this property.');
       setSaving(false);
     }

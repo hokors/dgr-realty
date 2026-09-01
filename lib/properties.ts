@@ -84,37 +84,70 @@ const propertySelect = `
   property_amenities(amenities(name))
 `;
 
+const sampleDataEnabled = process.env.NODE_ENV === 'development';
+
+class PropertyDataUnavailableError extends Error {}
+
+function developmentFallbackOrThrow<T>(logMessage: string, fallback: T): T {
+  console.error(logMessage);
+  if (!sampleDataEnabled) {
+    throw new PropertyDataUnavailableError('Property data is currently unavailable.');
+  }
+  return fallback;
+}
+
 export async function getProperties(): Promise<Property[]> {
   const client = publicClient();
-  if (!client) return sampleProperties;
-
-  const { data, error } = await client
-    .from('properties')
-    .select(propertySelect)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Unable to load Supabase properties:', error.message);
-    return sampleProperties;
+  if (!client) {
+    return developmentFallbackOrThrow(
+      'Supabase property configuration is missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+      sampleProperties,
+    );
   }
 
-  return (data as unknown as DatabaseProperty[]).map(mapProperty);
+  try {
+    const { data, error } = await client
+      .from('properties')
+      .select(propertySelect)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      return developmentFallbackOrThrow(`Unable to load Supabase properties: ${error.message}`, sampleProperties);
+    }
+
+    return (data as unknown as DatabaseProperty[]).map(mapProperty);
+  } catch (error) {
+    if (error instanceof PropertyDataUnavailableError) throw error;
+    const message = error instanceof Error ? error.message : 'Unknown database error';
+    return developmentFallbackOrThrow(`Unable to load Supabase properties: ${message}`, sampleProperties);
+  }
 }
 
 export async function getPropertyBySlug(slug: string): Promise<Property | null> {
   const client = publicClient();
-  if (!client) return sampleProperties.find((property) => property.slug === slug) ?? null;
-
-  const { data, error } = await client
-    .from('properties')
-    .select(propertySelect)
-    .eq('slug', slug)
-    .maybeSingle();
-
-  if (error) {
-    console.error('Unable to load Supabase property:', error.message);
-    return sampleProperties.find((property) => property.slug === slug) ?? null;
+  const developmentProperty = sampleProperties.find((property) => property.slug === slug) ?? null;
+  if (!client) {
+    return developmentFallbackOrThrow(
+      'Supabase property configuration is missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+      developmentProperty,
+    );
   }
 
-  return data ? mapProperty(data as unknown as DatabaseProperty) : null;
+  try {
+    const { data, error } = await client
+      .from('properties')
+      .select(propertySelect)
+      .eq('slug', slug)
+      .maybeSingle();
+
+    if (error) {
+      return developmentFallbackOrThrow(`Unable to load Supabase property: ${error.message}`, developmentProperty);
+    }
+
+    return data ? mapProperty(data as unknown as DatabaseProperty) : null;
+  } catch (error) {
+    if (error instanceof PropertyDataUnavailableError) throw error;
+    const message = error instanceof Error ? error.message : 'Unknown database error';
+    return developmentFallbackOrThrow(`Unable to load Supabase property: ${message}`, developmentProperty);
+  }
 }

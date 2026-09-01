@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Edit3, LoaderCircle, Plus, Search, Star, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { formatPrice } from '@/lib/format';
 import { propertyStatuses } from '@/lib/admin/types';
 import type { PropertyStatus } from '@/lib/types';
@@ -19,7 +18,6 @@ export type PropertyManagerRow = {
   featured: boolean;
   city: string;
   property_categories: { name: string } | null;
-  property_images: Array<{ id: string; storage_path: string | null }>;
 };
 
 export function PropertyManager({ initialProperties }: { initialProperties: PropertyManagerRow[] }) {
@@ -40,35 +38,42 @@ export function PropertyManager({ initialProperties }: { initialProperties: Prop
   }, [listingType, properties, query, status]);
 
   async function updateProperty(id: string, updates: { status?: PropertyStatus; featured?: boolean }) {
-    const supabase = createBrowserSupabaseClient();
-    if (!supabase) return;
     setWorkingId(id);
     setMessage('');
-    const { error } = await supabase.from('properties').update(updates).eq('id', id);
-    if (error) setMessage(error.message);
-    else setProperties((rows) => rows.map((row) => row.id === id ? { ...row, ...updates } : row));
-    setWorkingId(null);
-    router.refresh();
+    try {
+      const response = await fetch(`/api/admin/properties/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const result = await response.json() as { success?: boolean; error?: string };
+      if (!response.ok || !result.success) throw new Error(result.error ?? 'Unable to update the property.');
+      setProperties((rows) => rows.map((row) => row.id === id ? { ...row, ...updates } : row));
+      router.refresh();
+    } catch (updateError) {
+      setMessage(updateError instanceof Error ? updateError.message : 'Unable to update the property.');
+    } finally {
+      setWorkingId(null);
+    }
   }
 
   async function deleteProperty(property: PropertyManagerRow) {
     if (!window.confirm(`Delete “${property.title}” and all of its property photos? This cannot be undone.`)) return;
-    const supabase = createBrowserSupabaseClient();
-    if (!supabase) return;
     setWorkingId(property.id);
     setMessage('');
 
-    const paths = property.property_images.map((image) => image.storage_path).filter((path): path is string => Boolean(path));
-    if (paths.length > 0) await supabase.storage.from('property-images').remove(paths);
-
-    const { error } = await supabase.from('properties').delete().eq('id', property.id);
-    if (error) setMessage(error.message);
-    else {
+    try {
+      const response = await fetch(`/api/admin/properties/${property.id}`, { method: 'DELETE' });
+      const result = await response.json() as { success?: boolean; error?: string };
+      if (!response.ok || !result.success) throw new Error(result.error ?? 'Unable to delete the property.');
       setProperties((rows) => rows.filter((row) => row.id !== property.id));
       setMessage('Property deleted.');
       router.refresh();
+    } catch (deleteError) {
+      setMessage(deleteError instanceof Error ? deleteError.message : 'Unable to delete the property.');
+    } finally {
+      setWorkingId(null);
     }
-    setWorkingId(null);
   }
 
   return (
