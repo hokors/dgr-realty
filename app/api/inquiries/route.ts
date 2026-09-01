@@ -127,7 +127,12 @@ export async function POST(request: Request) {
   let propertyId: string | null = isUuid(requestedPropertyId) ? requestedPropertyId : null;
   let propertyTitle = requestedPropertyTitle || null;
   if (propertyId) {
-    const { data: property } = await supabase.from('properties').select('id, title').eq('id', propertyId).maybeSingle();
+    const { data: property } = await supabase
+      .from('properties')
+      .select('id, title')
+      .eq('id', propertyId)
+      .eq('publication_status', 'published')
+      .maybeSingle();
     if (property) propertyTitle = property.title;
     else propertyId = null;
   }

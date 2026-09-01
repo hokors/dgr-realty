@@ -78,7 +78,25 @@ function publicClient() {
 }
 
 const propertySelect = `
-  *,
+  id,
+  title,
+  slug,
+  description,
+  listing_type,
+  price,
+  price_suffix,
+  location,
+  city,
+  province,
+  bedrooms,
+  bathrooms,
+  parking_spaces,
+  lot_area,
+  floor_area,
+  status,
+  featured,
+  created_at,
+  updated_at,
   property_categories(name),
   property_images(id, image_url, display_order, alt_text),
   property_amenities(amenities(name))
@@ -109,6 +127,7 @@ export async function getProperties(): Promise<Property[]> {
     const { data, error } = await client
       .from('properties')
       .select(propertySelect)
+      .eq('publication_status', 'published')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -138,6 +157,7 @@ export async function getPropertyBySlug(slug: string): Promise<Property | null> 
       .from('properties')
       .select(propertySelect)
       .eq('slug', slug)
+      .eq('publication_status', 'published')
       .maybeSingle();
 
     if (error) {

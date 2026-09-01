@@ -1,4 +1,4 @@
-import type { ListingType, PropertyStatus } from '@/lib/types';
+import type { ListingType, PropertyPublicationStatus, PropertyStatus } from '@/lib/types';
 
 export type AdminCategory = {
   id: string;
@@ -32,6 +32,7 @@ export type AdminProperty = {
   floor_area: number | null;
   status: PropertyStatus;
   featured: boolean;
+  publication_status: PropertyPublicationStatus;
   created_at: string;
   updated_at: string;
   property_categories?: { name: string } | null;
@@ -56,3 +57,5 @@ export const propertyStatuses: PropertyStatus[] = [
   'Rented',
   'Under Negotiation',
 ];
+
+export const propertyPublicationStatuses: PropertyPublicationStatus[] = ['draft', 'published', 'archived'];

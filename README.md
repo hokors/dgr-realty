@@ -9,13 +9,14 @@ A responsive Next.js property catalog for DGR Realty, with property search, SEO-
 3. Run `supabase/migrations/202608310001_initial_real_estate_schema.sql` in a new Supabase project.
 4. Run `supabase/migrations/202609010002_inquiries.sql` to create the secure lead inbox.
 5. Run `supabase/migrations/202609010003_recoverable_property_mutations.sql` to install transactional admin saves and recoverable image cleanup.
-6. Create the first administrator in Supabase Auth, then run the one-line role update shown at the bottom of the initial migration.
-7. Add a server-only Supabase secret key as `SUPABASE_SECRET_KEY`. Never prefix this value with `NEXT_PUBLIC_`.
-8. Configure the matching Turnstile site and secret keys for production spam protection. Resend variables are optional and enable email notifications; inquiries are still stored in Supabase without them.
-9. Add the public phone, email, Facebook, and Messenger values you want displayed.
-10. Run `npm run dev`.
+6. Run `supabase/migrations/202609010004_property_publication_visibility.sql` to add draft/published/archived visibility and restrict public property reads.
+7. Create the first administrator in Supabase Auth, then run the one-line role update shown at the bottom of the initial migration.
+8. Add a server-only Supabase secret key as `SUPABASE_SECRET_KEY`. Never prefix this value with `NEXT_PUBLIC_`.
+9. Configure the matching Turnstile site and secret keys for production spam protection. Resend variables are optional and enable email notifications; inquiries are still stored in Supabase without them.
+10. Add the public phone, email, Facebook, and Messenger values you want displayed.
+11. Run `npm run dev`.
 
-Without Supabase variables, the public website uses the polished sample dataset and the admin page shows setup guidance.
+During local development, missing Supabase variables use the polished sample dataset and the admin page shows setup guidance. Production fails visibly instead of presenting sample listings as live inventory.
 
 ## Deployment
 

@@ -6,6 +6,8 @@ export type PropertyStatus =
   | 'Rented'
   | 'Under Negotiation';
 
+export type PropertyPublicationStatus = 'draft' | 'published' | 'archived';
+
 export interface PropertyImage {
   id: string;
   imageUrl: string;

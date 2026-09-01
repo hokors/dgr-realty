@@ -6,7 +6,7 @@ export default async function AdminPropertiesPage() {
   const { data } = supabase
     ? await supabase
         .from('properties')
-        .select('id, title, slug, price, listing_type, status, featured, city, property_categories(name)')
+        .select('id, title, slug, price, listing_type, status, featured, publication_status, city, property_categories(name)')
         .order('created_at', { ascending: false })
     : { data: [] };
 

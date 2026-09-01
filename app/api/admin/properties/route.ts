@@ -12,7 +12,7 @@ import {
   propertyImageBucket,
   removeStoragePaths,
 } from '@/lib/admin/property-mutations';
-import { propertyStatuses } from '@/lib/admin/types';
+import { propertyPublicationStatuses, propertyStatuses } from '@/lib/admin/types';
 
 export const runtime = 'nodejs';
 
@@ -34,6 +34,7 @@ type PropertyInput = {
   floorArea?: unknown;
   status?: unknown;
   featured?: unknown;
+  publicationStatus?: unknown;
 };
 type SaveRequest = {
   operationId?: unknown;
@@ -61,8 +62,12 @@ function validateProperty(input: PropertyInput | undefined) {
   const city = cleanText(input?.city, 120);
   const province = cleanText(input?.province, 120);
   const status = typeof input?.status === 'string' && propertyStatuses.includes(input.status as (typeof propertyStatuses)[number]) ? input.status : '';
+  const publicationStatus = typeof input?.publicationStatus === 'string'
+    && propertyPublicationStatuses.includes(input.publicationStatus as (typeof propertyPublicationStatuses)[number])
+    ? input.publicationStatus
+    : '';
 
-  if (title.length < 2 || !description || !categoryId || !listingType || !Number.isFinite(price) || price < 0 || !location || !city || !province || !status) {
+  if (title.length < 2 || !description || !categoryId || !listingType || !Number.isFinite(price) || price < 0 || !location || !city || !province || !status || !publicationStatus) {
     throw new Error('Please complete all required property fields with valid values.');
   }
 
@@ -83,6 +88,7 @@ function validateProperty(input: PropertyInput | undefined) {
     floor_area: optionalNumber(input?.floorArea),
     status,
     featured: input?.featured === true,
+    publication_status: publicationStatus,
   };
 }
 
@@ -212,7 +218,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: manifestError instanceof Error ? manifestError.message : 'Unable to prepare property images.' }, { status: 500 });
   }
 
-  const { data: savedRows, error: saveError } = await context.supabase.rpc('save_property_atomic', {
+  const { data: savedRows, error: saveError } = await context.supabase.rpc('save_property_with_publication_atomic', {
     p_operation_id: operationId,
     p_property_id: propertyId,
     p_create: create,

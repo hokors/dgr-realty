@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminMutationContext, hasValidMutationOrigin, isUuid, processStorageCleanup } from '@/lib/admin/property-mutations';
-import { propertyStatuses } from '@/lib/admin/types';
+import { propertyPublicationStatuses, propertyStatuses } from '@/lib/admin/types';
+import type { PropertyPublicationStatus } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
@@ -13,19 +14,22 @@ export async function PATCH(request: Request, { params }: RouteProps) {
   const { id } = await params;
   if (!isUuid(id)) return NextResponse.json({ error: 'Invalid property identifier.' }, { status: 400 });
 
-  let body: { status?: unknown; featured?: unknown };
+  let body: { status?: unknown; featured?: unknown; publicationStatus?: unknown };
   try {
     body = await request.json() as typeof body;
   } catch {
     return NextResponse.json({ error: 'Invalid property update request.' }, { status: 400 });
   }
 
-  const updates: { status?: string; featured?: boolean } = {};
+  const updates: { status?: string; featured?: boolean; publication_status?: PropertyPublicationStatus } = {};
   if (typeof body.status === 'string' && propertyStatuses.includes(body.status as (typeof propertyStatuses)[number])) updates.status = body.status;
   if (typeof body.featured === 'boolean') updates.featured = body.featured;
+  if (typeof body.publicationStatus === 'string' && propertyPublicationStatuses.includes(body.publicationStatus as PropertyPublicationStatus)) {
+    updates.publication_status = body.publicationStatus as PropertyPublicationStatus;
+  }
   if (Object.keys(updates).length === 0) return NextResponse.json({ error: 'No valid property changes were provided.' }, { status: 400 });
 
-  const { data, error } = await context.supabase.from('properties').update(updates).eq('id', id).select('id, status, featured').maybeSingle();
+  const { data, error } = await context.supabase.from('properties').update(updates).eq('id', id).select('id, status, featured, publication_status').maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ error: 'Property not found.' }, { status: 404 });
   return NextResponse.json({ success: true, property: data });

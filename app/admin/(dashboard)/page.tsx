@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { ArrowRight, Building2, CheckCircle2, Clock3, KeyRound, Plus, Star } from 'lucide-react';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import type { PropertyStatus } from '@/lib/types';
+import type { PropertyPublicationStatus, PropertyStatus } from '@/lib/types';
 
 type DashboardProperty = {
   id: string;
   title: string;
   status: PropertyStatus;
   featured: boolean;
+  publication_status: PropertyPublicationStatus;
   created_at: string;
 };
 
@@ -26,7 +27,7 @@ function HomeIcon(props: { className?: string }) {
 export default async function AdminDashboardPage() {
   const supabase = await createServerSupabaseClient();
   const { data } = supabase
-    ? await supabase.from('properties').select('id, title, status, featured, created_at').order('created_at', { ascending: false })
+    ? await supabase.from('properties').select('id, title, status, featured, publication_status, created_at').order('created_at', { ascending: false })
     : { data: [] };
   const properties = (data as DashboardProperty[] | null) ?? [];
   const counts = properties.reduce<Record<string, number>>((totals, property) => {
@@ -59,7 +60,7 @@ export default async function AdminDashboardPage() {
           <div className="divide-y divide-[#edf0ed]">
             {properties.slice(0, 6).map((property) => (
               <div key={property.id} className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6">
-                <div className="min-w-0"><p className="truncate text-sm font-semibold">{property.title}</p><p className="mt-1 text-xs text-[#7a827d]">{property.status}</p></div>
+                <div className="min-w-0"><p className="truncate text-sm font-semibold">{property.title}</p><p className="mt-1 text-xs text-[#7a827d]">{property.status} · {property.publication_status[0].toUpperCase() + property.publication_status.slice(1)}</p></div>
                 {property.featured && <span className="flex shrink-0 items-center gap-1 rounded-full bg-[#f4ead1] px-2.5 py-1 text-[10px] font-bold text-[#8a7135]"><Star className="h-3 w-3" fill="currentColor" /> Featured</span>}
               </div>
             ))}

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ArrowDown, ArrowLeft, ArrowUp, ImagePlus, LoaderCircle, Save, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
-import { adminCategories, propertyStatuses, type AdminCategory, type AdminImage, type AdminProperty } from '@/lib/admin/types';
+import { adminCategories, propertyPublicationStatuses, propertyStatuses, type AdminCategory, type AdminImage, type AdminProperty } from '@/lib/admin/types';
 
 type ExistingImageItem = { kind: 'existing'; key: string; image: AdminImage; previewUrl: string };
 type NewImageItem = { kind: 'new'; key: string; file: File; previewUrl: string };
@@ -126,6 +126,7 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
         floorArea: optionalNumber(form.get('floor_area')),
         status: String(form.get('status') ?? 'Available'),
         featured: form.get('featured') === 'on',
+        publicationStatus: String(form.get('publication_status') ?? 'draft'),
       };
       const amenitiesList = Array.from(new Set(String(form.get('amenities') ?? '').split(/[,\n]/).map((item) => item.trim()).filter(Boolean)));
       const imageManifest = images.map((item) => item.kind === 'existing'
@@ -226,12 +227,13 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
           <section className="rounded-2xl border border-[#dde2de] bg-white p-5 sm:p-6">
             <h2 className="text-lg font-bold">Publishing</h2>
             <div className="mt-5 space-y-4">
-              <label><span className="field-label">Status</span><select name="status" defaultValue={initialProperty?.status ?? 'Available'} className={field}>{propertyStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+              <label><span className="field-label">Availability</span><select name="status" defaultValue={initialProperty?.status ?? 'Available'} className={field}>{propertyStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
+              <label><span className="field-label">Visibility</span><select name="publication_status" defaultValue={initialProperty?.publication_status ?? 'draft'} className={field}>{propertyPublicationStatuses.map((status) => <option key={status} value={status}>{status[0].toUpperCase() + status.slice(1)}</option>)}</select><span className="mt-2 block text-xs leading-5 text-[#747c77]">Draft and archived listings are hidden from the public website.</span></label>
               <label className="flex items-start gap-3 rounded-xl border border-[#dde2de] p-4"><input name="featured" type="checkbox" defaultChecked={initialProperty?.featured} className="mt-0.5 h-4 w-4 accent-[#24634e]" /><span><span className="block text-sm font-semibold">Featured listing</span><span className="mt-1 block text-xs leading-5 text-[#747c77]">Show this property in featured areas on the public site.</span></span></label>
             </div>
           </section>
 
-          <div className="rounded-2xl bg-[#e5eee9] p-5 text-sm leading-6 text-[#3f5b4f]">Saving publishes the latest information immediately. Public property pages always load current Supabase data.</div>
+          <div className="rounded-2xl bg-[#e5eee9] p-5 text-sm leading-6 text-[#3f5b4f]">Only published listings appear on the public website. Save as draft while details or photos are still being prepared.</div>
 
           <button disabled={saving} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#24634e] px-5 py-3.5 text-sm font-bold text-white hover:bg-[#1b4f3e] disabled:opacity-60">{saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? 'Saving property…' : 'Save property'}</button>
         </aside>
