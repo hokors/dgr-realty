@@ -150,11 +150,11 @@ insert into public.property_categories (name, slug, display_order) values
 on conflict (slug) do nothing;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('property-images', 'property-images', true, 10485760, array['image/jpeg', 'image/png', 'image/webp', 'image/avif'])
+values ('property-images', 'property-images', false, 10485760, array['image/jpeg', 'image/png', 'image/webp', 'image/avif'])
 on conflict (id) do update set public = excluded.public;
 
-create policy "Public reads stored property images"
-on storage.objects for select using (bucket_id = 'property-images');
+create policy "Admins read stored property images"
+on storage.objects for select using (bucket_id = 'property-images' and public.is_admin());
 
 create policy "Admins upload stored property images"
 on storage.objects for insert with check (bucket_id = 'property-images' and public.is_admin());

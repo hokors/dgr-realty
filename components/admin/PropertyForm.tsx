@@ -13,6 +13,68 @@ type NewImageItem = { kind: 'new'; key: string; file: File; previewUrl: string }
 type ImageItem = ExistingImageItem | NewImageItem;
 type SaveProgress = { label: string; current?: number; total?: number };
 
+const IMAGE_OPTIMIZATION_CONCURRENCY = 2;
+const IMAGE_UPLOAD_CONCURRENCY = 5;
+const IMAGE_UPLOAD_ATTEMPTS = 3;
+const MAX_IMAGE_DIMENSION = 2200;
+const WEBP_QUALITY = 0.84;
+
+function delay(milliseconds: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+function webpFileName(fileName: string) {
+  const baseName = fileName.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'property-photo';
+  return `${baseName}.webp`;
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('The browser could not optimize this image.'));
+    }, 'image/webp', WEBP_QUALITY);
+  });
+}
+
+async function optimizeImage(file: File) {
+  if (typeof createImageBitmap !== 'function') return file;
+
+  let bitmap: ImageBitmap | null = null;
+  let canvas: HTMLCanvasElement | null = null;
+  try {
+    bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    if (!context) return file;
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(bitmap, 0, 0, width, height);
+    const optimizedBlob = await canvasToBlob(canvas);
+
+    // Keep the original when transcoding would make an already-efficient file larger.
+    if (scale === 1 && optimizedBlob.size >= file.size) return file;
+    return new File([optimizedBlob], webpFileName(file.name), {
+      type: 'image/webp',
+      lastModified: file.lastModified,
+    });
+  } catch {
+    // An unsupported browser/codec should not prevent a reliable original-file upload.
+    return file;
+  } finally {
+    bitmap?.close();
+    if (canvas) {
+      canvas.width = 1;
+      canvas.height = 1;
+    }
+  }
+}
+
 function optionalNumber(value: FormDataEntryValue | null) {
   if (value === null || String(value).trim() === '') return null;
   const number = Number(value);
@@ -109,42 +171,96 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
     const newImages = images.filter((item): item is NewImageItem => item.kind === 'new');
     const stagedByKey = new Map<string, string>();
     const stagedPaths: string[] = [];
-    let nextImageIndex = 0;
-    let uploadedCount = 0;
-    let uploadFailure: unknown = null;
     try {
       if (newImages.length === 0) return { stagedByKey, stagedPaths };
-      setSaveProgress({ label: `Uploading 0 of ${newImages.length}`, current: 0, total: newImages.length });
 
-      async function uploadWorker() {
-        while (!uploadFailure) {
-          const imageIndex = nextImageIndex;
-          nextImageIndex += 1;
+      const optimizedFiles = new Map<string, File>();
+      let nextOptimizationIndex = 0;
+      let optimizedCount = 0;
+      setSaveProgress({ label: `Optimizing 0 of ${newImages.length}`, current: 0, total: newImages.length });
+
+      async function optimizationWorker() {
+        while (true) {
+          const imageIndex = nextOptimizationIndex;
+          nextOptimizationIndex += 1;
           if (imageIndex >= newImages.length) return;
           const item = newImages[imageIndex];
+          optimizedFiles.set(item.key, await optimizeImage(item.file));
+          optimizedCount += 1;
+          setSaveProgress({ label: `Optimizing ${optimizedCount} of ${newImages.length}`, current: optimizedCount, total: newImages.length });
+        }
+      }
+
+      await Promise.all(Array.from(
+        { length: Math.min(IMAGE_OPTIMIZATION_CONCURRENCY, newImages.length) },
+        () => optimizationWorker(),
+      ));
+
+      async function removeStagedPath(path: string) {
+        await fetch('/api/admin/property-images/stage', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paths: [path] }),
+        }).catch(() => undefined);
+      }
+
+      async function uploadImage(item: NewImageItem) {
+        const file = optimizedFiles.get(item.key) ?? item.file;
+        let lastError: unknown = new Error('Unable to upload this photo.');
+
+        for (let attempt = 1; attempt <= IMAGE_UPLOAD_ATTEMPTS; attempt += 1) {
+          let attemptPath: string | null = null;
           try {
             const prepareResponse = await fetch('/api/admin/property-images/stage', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ draftId: operationId, name: item.file.name, type: item.file.type, size: item.file.size }),
+              body: JSON.stringify({ draftId: operationId, name: file.name, type: file.type, size: file.size }),
             });
             const prepared = await prepareResponse.json() as { path?: string; token?: string; error?: string };
             if (!prepareResponse.ok || !prepared.path || !prepared.token) throw new Error(prepared.error ?? 'Unable to prepare an image upload.');
-            stagedPaths.push(prepared.path);
-            const { error: uploadError } = await storage.uploadToSignedUrl(prepared.path, prepared.token, item.file, { contentType: item.file.type });
+            attemptPath = prepared.path;
+            const { error: uploadError } = await storage.uploadToSignedUrl(prepared.path, prepared.token, file, { contentType: file.type });
             if (uploadError) throw uploadError;
             stagedByKey.set(item.key, prepared.path);
+            stagedPaths.push(prepared.path);
+            return;
+          } catch (uploadError) {
+            lastError = uploadError;
+            if (attemptPath) await removeStagedPath(attemptPath);
+            if (attempt < IMAGE_UPLOAD_ATTEMPTS) await delay(300 * attempt);
+          }
+        }
+
+        throw lastError;
+      }
+
+      let nextUploadIndex = 0;
+      let uploadedCount = 0;
+      const failedUploads: Array<{ item: NewImageItem; error: unknown }> = [];
+      setSaveProgress({ label: `Uploading 0 of ${newImages.length}`, current: 0, total: newImages.length });
+
+      async function uploadWorker() {
+        while (true) {
+          const imageIndex = nextUploadIndex;
+          nextUploadIndex += 1;
+          if (imageIndex >= newImages.length) return;
+          const item = newImages[imageIndex];
+          try {
+            await uploadImage(item);
             uploadedCount += 1;
             setSaveProgress({ label: `Uploading ${uploadedCount} of ${newImages.length}`, current: uploadedCount, total: newImages.length });
-          } catch (workerError) {
-            uploadFailure = workerError;
+          } catch (uploadError) {
+            failedUploads.push({ item, error: uploadError });
           }
         }
       }
 
-      const workerCount = Math.min(3, newImages.length);
+      const workerCount = Math.min(IMAGE_UPLOAD_CONCURRENCY, newImages.length);
       await Promise.all(Array.from({ length: workerCount }, () => uploadWorker()));
-      if (uploadFailure) throw uploadFailure;
+      if (failedUploads.length > 0) {
+        const noun = failedUploads.length === 1 ? 'photo' : 'photos';
+        throw new Error(`Unable to upload ${failedUploads.length} ${noun} after ${IMAGE_UPLOAD_ATTEMPTS} attempts. No property changes were saved.`);
+      }
       return { stagedByKey, stagedPaths };
     } catch (stageError) {
       await fetch('/api/admin/property-images/stage', {

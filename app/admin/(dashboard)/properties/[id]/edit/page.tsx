@@ -26,6 +26,10 @@ export default async function EditPropertyPage({ params }: EditPropertyPageProps
     lot_area: property.lot_area === null ? null : Number(property.lot_area),
     floor_area: property.floor_area === null ? null : Number(property.floor_area),
     bathrooms: property.bathrooms === null ? null : Number(property.bathrooms),
+    property_images: (property.property_images ?? []).map((image) => ({
+      ...image,
+      image_url: image.storage_path ? `/api/property-images/${image.id}` : image.image_url,
+    })),
   } as unknown as AdminProperty;
 
   return <PropertyForm categories={(categories as AdminCategory[] | null) ?? []} initialProperty={normalized} />;

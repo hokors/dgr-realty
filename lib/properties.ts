@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { sampleProperties } from '@/data/sample-properties';
+import { getAbsoluteUrl } from '@/lib/site-url';
 import type { Property, PropertyImage } from '@/lib/types';
 
 type DatabaseProperty = {
@@ -26,6 +27,7 @@ type DatabaseProperty = {
   property_images: Array<{
     id: string;
     image_url: string;
+    storage_path: string | null;
     display_order: number;
     alt_text: string | null;
   }>;
@@ -37,7 +39,7 @@ function mapProperty(row: DatabaseProperty): Property {
     .sort((a, b) => a.display_order - b.display_order)
     .map((item) => ({
       id: item.id,
-      imageUrl: item.image_url,
+      imageUrl: item.storage_path ? getAbsoluteUrl(`/api/property-images/${item.id}`) : item.image_url,
       displayOrder: item.display_order,
       altText: item.alt_text ?? undefined,
     }));
@@ -98,7 +100,7 @@ const propertySelect = `
   created_at,
   updated_at,
   property_categories(name),
-  property_images(id, image_url, display_order, alt_text),
+  property_images(id, image_url, storage_path, display_order, alt_text),
   property_amenities(amenities(name))
 `;
 
