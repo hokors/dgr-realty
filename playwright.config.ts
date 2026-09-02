@@ -1,7 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const deployedBaseUrl = process.env.PLAYWRIGHT_TEST_BASE_URL?.trim();
-const baseURL = deployedBaseUrl || 'http://127.0.0.1:3000';
+const localBaseUrl = process.env.CI ? 'http://127.0.0.1:3000' : 'http://localhost:3000';
+const baseURL = deployedBaseUrl || localBaseUrl;
 const browserProject = process.platform === 'win32'
   ? { name: 'webkit', use: { ...devices['Desktop Safari'] } }
   : { name: 'chromium', use: { ...devices['Desktop Chrome'] } };
