@@ -1,5 +1,18 @@
 # DGR Realty
 
+## Automated checks
+
+Run the local code-quality suite with `npm run check`. For browser tests on
+Windows, keep `npm run dev` open in one terminal and run `npm run test:e2e` in a
+second terminal. Use `npm run test:e2e:headed` to watch the browser and
+`npm run test:e2e:report` to open the latest HTML report. GitHub Actions starts
+its own server and runs the complete suite automatically.
+
+Set `PLAYWRIGHT_TEST_BASE_URL` to test an existing deployment. The optional
+`E2E_DRAFT_PROPERTY_SLUG` variable enables a check against a real draft record.
+Never run future create/edit/delete tests against the production Supabase
+project; use a separate test project for destructive admin scenarios.
+
 A responsive Next.js property catalog for DGR Realty, with property search, SEO-friendly detail pages, a Supabase-backed admin dashboard, image management, and secure inquiry capture.
 
 ## Local setup
