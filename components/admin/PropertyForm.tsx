@@ -1,9 +1,9 @@
 'use client';
 
-import { ChangeEvent, FormEvent, useMemo, useState } from 'react';
+import { ChangeEvent, DragEvent, FormEvent, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowDown, ArrowLeft, ArrowUp, ImagePlus, LoaderCircle, Save, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, GripVertical, ImagePlus, LoaderCircle, Save, Star, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { adminCategories, propertyPublicationStatuses, propertyStatuses, type AdminCategory, type AdminImage, type AdminProperty } from '@/lib/admin/types';
@@ -11,6 +11,7 @@ import { adminCategories, propertyPublicationStatuses, propertyStatuses, type Ad
 type ExistingImageItem = { kind: 'existing'; key: string; image: AdminImage; previewUrl: string };
 type NewImageItem = { kind: 'new'; key: string; file: File; previewUrl: string };
 type ImageItem = ExistingImageItem | NewImageItem;
+type SaveProgress = { label: string; current?: number; total?: number };
 
 function optionalNumber(value: FormDataEntryValue | null) {
   if (value === null || String(value).trim() === '') return null;
@@ -28,6 +29,9 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
   const [operationId] = useState(() => crypto.randomUUID());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [saveProgress, setSaveProgress] = useState<SaveProgress | null>(null);
+  const [draggedImageKey, setDraggedImageKey] = useState<string | null>(null);
+  const [dragTargetKey, setDragTargetKey] = useState<string | null>(null);
 
   const allowedCategories = categories.filter((category) => adminCategories.includes(category.name as (typeof adminCategories)[number]));
   const amenities = initialProperty?.property_amenities.map((item) => item.amenities?.name).filter((name): name is string => Boolean(name)).join(', ') ?? '';
@@ -59,6 +63,37 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
     });
   }
 
+  function makeMainImage(index: number) {
+    if (index === 0) return;
+    setImages((current) => {
+      const next = [...current];
+      const [selected] = next.splice(index, 1);
+      next.unshift(selected);
+      return next;
+    });
+  }
+
+  function reorderImage(sourceKey: string, targetKey: string) {
+    if (sourceKey === targetKey) return;
+    setImages((current) => {
+      const sourceIndex = current.findIndex((item) => item.key === sourceKey);
+      const targetIndex = current.findIndex((item) => item.key === targetKey);
+      if (sourceIndex < 0 || targetIndex < 0) return current;
+      const next = [...current];
+      const [moved] = next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, moved);
+      return next;
+    });
+  }
+
+  function dropImage(event: DragEvent<HTMLDivElement>, targetKey: string) {
+    event.preventDefault();
+    const sourceKey = draggedImageKey ?? event.dataTransfer.getData('text/plain');
+    if (sourceKey) reorderImage(sourceKey, targetKey);
+    setDraggedImageKey(null);
+    setDragTargetKey(null);
+  }
+
   function removeImage(index: number) {
     setImages((current) => {
       const item = current[index];
@@ -70,23 +105,46 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
   async function stageNewImages() {
     const supabase = createBrowserSupabaseClient();
     if (!supabase) throw new Error('Supabase is not configured.');
+    const storage = supabase.storage.from('property-images');
+    const newImages = images.filter((item): item is NewImageItem => item.kind === 'new');
     const stagedByKey = new Map<string, string>();
     const stagedPaths: string[] = [];
+    let nextImageIndex = 0;
+    let uploadedCount = 0;
+    let uploadFailure: unknown = null;
     try {
-      for (const item of images) {
-        if (item.kind !== 'new') continue;
-        const prepareResponse = await fetch('/api/admin/property-images/stage', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ draftId: operationId, name: item.file.name, type: item.file.type, size: item.file.size }),
-        });
-        const prepared = await prepareResponse.json() as { path?: string; token?: string; error?: string };
-        if (!prepareResponse.ok || !prepared.path || !prepared.token) throw new Error(prepared.error ?? 'Unable to prepare an image upload.');
-        stagedPaths.push(prepared.path);
-        const { error: uploadError } = await supabase.storage.from('property-images').uploadToSignedUrl(prepared.path, prepared.token, item.file, { contentType: item.file.type });
-        if (uploadError) throw uploadError;
-        stagedByKey.set(item.key, prepared.path);
+      if (newImages.length === 0) return { stagedByKey, stagedPaths };
+      setSaveProgress({ label: `Uploading 0 of ${newImages.length}`, current: 0, total: newImages.length });
+
+      async function uploadWorker() {
+        while (!uploadFailure) {
+          const imageIndex = nextImageIndex;
+          nextImageIndex += 1;
+          if (imageIndex >= newImages.length) return;
+          const item = newImages[imageIndex];
+          try {
+            const prepareResponse = await fetch('/api/admin/property-images/stage', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ draftId: operationId, name: item.file.name, type: item.file.type, size: item.file.size }),
+            });
+            const prepared = await prepareResponse.json() as { path?: string; token?: string; error?: string };
+            if (!prepareResponse.ok || !prepared.path || !prepared.token) throw new Error(prepared.error ?? 'Unable to prepare an image upload.');
+            stagedPaths.push(prepared.path);
+            const { error: uploadError } = await storage.uploadToSignedUrl(prepared.path, prepared.token, item.file, { contentType: item.file.type });
+            if (uploadError) throw uploadError;
+            stagedByKey.set(item.key, prepared.path);
+            uploadedCount += 1;
+            setSaveProgress({ label: `Uploading ${uploadedCount} of ${newImages.length}`, current: uploadedCount, total: newImages.length });
+          } catch (workerError) {
+            uploadFailure = workerError;
+          }
+        }
       }
+
+      const workerCount = Math.min(3, newImages.length);
+      await Promise.all(Array.from({ length: workerCount }, () => uploadWorker()));
+      if (uploadFailure) throw uploadFailure;
       return { stagedByKey, stagedPaths };
     } catch (stageError) {
       await fetch('/api/admin/property-images/stage', {
@@ -102,6 +160,7 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
     event.preventDefault();
     setSaving(true);
     setError('');
+    setSaveProgress({ label: 'Preparing property photos…' });
 
     let stagedPaths: string[] = [];
     try {
@@ -109,6 +168,7 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
       const title = String(form.get('title') ?? '').trim();
       const { stagedByKey, stagedPaths: uploadedPaths } = await stageNewImages();
       stagedPaths = uploadedPaths;
+      setSaveProgress({ label: 'Saving property details…' });
       const property = {
         title,
         description: String(form.get('description') ?? '').trim(),
@@ -158,6 +218,7 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
         }).catch(() => undefined);
       }
       setError(saveError instanceof Error ? saveError.message : 'Unable to save this property.');
+      setSaveProgress(null);
       setSaving(false);
     }
   }
@@ -168,10 +229,11 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
     <form onSubmit={saveProperty}>
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div><Link href="/admin/properties" className="flex items-center gap-2 text-xs font-bold text-[#24634e]"><ArrowLeft className="h-3.5 w-3.5" /> Back to properties</Link><h1 className="display mt-4 text-4xl tracking-[-0.045em] sm:text-5xl">{isEditing ? 'Edit property' : 'Add property'}</h1><p className="mt-3 text-sm text-[#68716b]">{isEditing ? 'Update listing details and property photos.' : 'Create a new listing for the public marketplace.'}</p></div>
-        <button disabled={saving} className="flex items-center justify-center gap-2 self-start rounded-xl bg-[#24634e] px-5 py-3 text-sm font-bold text-white hover:bg-[#1b4f3e] disabled:opacity-60">{saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? 'Saving…' : 'Save property'}</button>
+        <button disabled={saving} className="flex items-center justify-center gap-2 self-start rounded-xl bg-[#24634e] px-5 py-3 text-sm font-bold text-white hover:bg-[#1b4f3e] disabled:opacity-60">{saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? saveProgress?.label ?? 'Saving…' : 'Save property'}</button>
       </div>
 
       {error && <p className="mt-5 rounded-xl bg-[#fae8e6] px-4 py-3 text-sm text-[#923f38]" role="alert">{error}</p>}
+      {saving && saveProgress && <div className="mt-5 rounded-xl border border-[#cfe0d7] bg-[#edf5f0] px-4 py-3" role="status" aria-live="polite"><div className="flex items-center justify-between gap-4 text-sm font-semibold text-[#285946]"><span>{saveProgress.label}</span>{saveProgress.total != null && <span>{Math.round(((saveProgress.current ?? 0) / saveProgress.total) * 100)}%</span>}</div>{saveProgress.total != null && <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#d3e4da]"><div className="h-full rounded-full bg-[#24634e] transition-[width] duration-300" style={{ width: `${((saveProgress.current ?? 0) / saveProgress.total) * 100}%` }} /></div>}</div>}
 
       <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
         <div className="space-y-6">
@@ -209,13 +271,32 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
           </section>
 
           <section className="rounded-2xl border border-[#dde2de] bg-white p-5 sm:p-7">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-lg font-bold">Property photos</h2><p className="mt-1 text-xs text-[#747c77]">The first image is used as the main listing photo.</p></div><label className="relative flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#cfd6d1] bg-white px-4 py-2.5 text-xs font-bold text-[#24634e] hover:bg-[#f1f5f2]"><ImagePlus className="h-4 w-4" /> Add photos<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif" onChange={addImages} className="absolute inset-0 cursor-pointer opacity-0" /></label></div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-lg font-bold">Property photos</h2><p className="mt-1 text-xs text-[#747c77]">Drag photos to reorder them. The first photo is the main listing image.</p></div><label className="relative flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#cfd6d1] bg-white px-4 py-2.5 text-xs font-bold text-[#24634e] hover:bg-[#f1f5f2]"><ImagePlus className="h-4 w-4" /> Add photos<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif" onChange={addImages} disabled={saving} className="absolute inset-0 cursor-pointer opacity-0" /></label></div>
             {images.length === 0 ? <div className="mt-6 rounded-2xl border border-dashed border-[#cfd6d1] px-6 py-14 text-center"><ImagePlus className="mx-auto h-6 w-6 text-[#8a938d]" /><p className="mt-3 text-sm font-semibold">No photos selected</p><p className="mt-1 text-xs text-[#7a827d]">Add JPG, PNG, WebP, or AVIF files.</p></div> : (
               <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {images.map((item, index) => (
-                  <div key={item.key} className="overflow-hidden rounded-xl border border-[#dde2de] bg-[#f5f6f4]">
-                    <div className="relative aspect-[4/3] bg-[#e5e8e5]"><Image src={item.previewUrl} alt={`${initialProperty?.title ?? 'New property'} preview ${index + 1}`} fill unoptimized sizes="(max-width: 640px) 100vw, 320px" className="object-cover" />{index === 0 && <span className="absolute left-2 top-2 rounded-lg bg-[#17362c]/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white">Main photo</span>}</div>
-                    <div className="flex items-center justify-between gap-2 p-2"><span className="pl-1 text-xs font-semibold text-[#68716b]">Photo {index + 1}</span><div className="flex gap-1"><button type="button" onClick={() => moveImage(index, -1)} disabled={index === 0} aria-label="Move photo earlier" className="grid h-8 w-8 place-items-center rounded-lg border border-[#d8ddd9] bg-white disabled:opacity-35"><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" onClick={() => moveImage(index, 1)} disabled={index === images.length - 1} aria-label="Move photo later" className="grid h-8 w-8 place-items-center rounded-lg border border-[#d8ddd9] bg-white disabled:opacity-35"><ArrowDown className="h-3.5 w-3.5" /></button><button type="button" onClick={() => removeImage(index)} aria-label="Delete photo" className="grid h-8 w-8 place-items-center rounded-lg border border-[#e4cbc8] bg-white text-[#98453e]"><Trash2 className="h-3.5 w-3.5" /></button></div></div>
+                  <div
+                    key={item.key}
+                    draggable={!saving}
+                    onDragStart={(event) => {
+                      event.dataTransfer.effectAllowed = 'move';
+                      event.dataTransfer.setData('text/plain', item.key);
+                      setDraggedImageKey(item.key);
+                    }}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = 'move';
+                      setDragTargetKey(item.key);
+                    }}
+                    onDrop={(event) => dropImage(event, item.key)}
+                    onDragEnd={() => {
+                      setDraggedImageKey(null);
+                      setDragTargetKey(null);
+                    }}
+                    className={`overflow-hidden rounded-xl border bg-[#f5f6f4] transition ${draggedImageKey === item.key ? 'scale-[0.98] opacity-50' : ''} ${dragTargetKey === item.key && draggedImageKey !== item.key ? 'border-[#24634e] ring-4 ring-[#24634e]/10' : 'border-[#dde2de]'}`}
+                  >
+                    <div className="relative aspect-[4/3] cursor-grab bg-[#e5e8e5] active:cursor-grabbing"><Image src={item.previewUrl} alt={`${initialProperty?.title ?? 'New property'} preview ${index + 1}`} fill unoptimized draggable={false} sizes="(max-width: 640px) 100vw, 320px" className="pointer-events-none object-cover" />{index === 0 && <span className="absolute left-2 top-2 rounded-lg bg-[#17362c]/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white">Main photo</span>}<span className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-lg bg-white/90 text-[#4c5650] shadow-sm" title="Drag to reorder"><GripVertical className="h-4 w-4" /></span></div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 p-2"><span className="pl-1 text-xs font-semibold text-[#68716b]">Photo {index + 1}</span><div className="flex gap-1">{index > 0 && <button type="button" onClick={() => makeMainImage(index)} disabled={saving} aria-label={`Make photo ${index + 1} the main photo`} title="Make main photo" className="flex h-8 items-center gap-1 rounded-lg border border-[#d8ddd9] bg-white px-2 text-[10px] font-bold text-[#24634e] disabled:opacity-35"><Star className="h-3.5 w-3.5" /> Main</button>}<button type="button" onClick={() => moveImage(index, -1)} disabled={saving || index === 0} aria-label="Move photo earlier" className="grid h-8 w-8 place-items-center rounded-lg border border-[#d8ddd9] bg-white disabled:opacity-35"><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" onClick={() => moveImage(index, 1)} disabled={saving || index === images.length - 1} aria-label="Move photo later" className="grid h-8 w-8 place-items-center rounded-lg border border-[#d8ddd9] bg-white disabled:opacity-35"><ArrowDown className="h-3.5 w-3.5" /></button><button type="button" onClick={() => removeImage(index)} disabled={saving} aria-label="Delete photo" className="grid h-8 w-8 place-items-center rounded-lg border border-[#e4cbc8] bg-white text-[#98453e] disabled:opacity-35"><Trash2 className="h-3.5 w-3.5" /></button></div></div>
                   </div>
                 ))}
               </div>
@@ -235,7 +316,7 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
 
           <div className="rounded-2xl bg-[#e5eee9] p-5 text-sm leading-6 text-[#3f5b4f]">Only published listings appear on the public website. Save as draft while details or photos are still being prepared.</div>
 
-          <button disabled={saving} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#24634e] px-5 py-3.5 text-sm font-bold text-white hover:bg-[#1b4f3e] disabled:opacity-60">{saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? 'Saving property…' : 'Save property'}</button>
+          <button disabled={saving} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#24634e] px-5 py-3.5 text-sm font-bold text-white hover:bg-[#1b4f3e] disabled:opacity-60">{saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {saving ? saveProgress?.label ?? 'Saving property…' : 'Save property'}</button>
         </aside>
       </div>
     </form>
