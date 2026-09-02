@@ -1,15 +1,21 @@
 -- Draft, published, and archived visibility for property listings.
 -- Existing listings remain public; new listings default to draft.
 
-create type public.property_publication_status as enum ('draft', 'published', 'archived');
+do $$
+begin
+  create type public.property_publication_status as enum ('draft', 'published', 'archived');
+exception
+  when duplicate_object then null;
+end
+$$;
 
 alter table public.properties
-add column publication_status public.property_publication_status not null default 'published';
+add column if not exists publication_status public.property_publication_status not null default 'published';
 
 alter table public.properties
 alter column publication_status set default 'draft';
 
-create index properties_publication_created_at_idx
+create index if not exists properties_publication_created_at_idx
 on public.properties(publication_status, created_at desc);
 
 -- Anonymous and authenticated PostgREST clients may only select presentation
@@ -22,7 +28,7 @@ grant select (
   description,
   category_id,
   listing_type,
-  price,
+  price,  
   price_suffix,
   location,
   city,

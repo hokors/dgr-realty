@@ -1,6 +1,12 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { Header } from '@/components/Header';
+
+export const metadata: Metadata = {
+  title: 'Property not found',
+  robots: { index: false, follow: false },
+};
 
 export default function NotFound() {
   return (

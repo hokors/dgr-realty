@@ -7,6 +7,7 @@ import { getProperties } from '@/lib/properties';
 export const metadata: Metadata = {
   title: 'Browse Properties',
   description: 'Browse houses, condominiums, land, rentals, commercial properties, and farm lots in Pampanga.',
+  alternates: { canonical: '/properties' },
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;

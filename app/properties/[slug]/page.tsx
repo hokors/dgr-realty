@@ -22,6 +22,7 @@ import { InquiryForm } from '@/components/InquiryForm';
 import { PropertyGallery } from '@/components/PropertyGallery';
 import { getPublicContactDetails } from '@/lib/contact';
 import { formatArea, formatDate, formatPrice } from '@/lib/format';
+import { createPropertyJsonLd, serializeJsonLd } from '@/lib/property-json-ld';
 import { getPropertyBySlug } from '@/lib/properties';
 
 type PropertyPageProps = { params: Promise<{ slug: string }> };
@@ -40,6 +41,7 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
   return {
     title: property.title,
     description,
+    alternates: { canonical: `/properties/${encodeURIComponent(property.slug)}` },
     openGraph: { title: `${property.title} | DGR Realty`, description, type: 'article', images: image ? [{ url: image, alt: property.images[0]?.altText ?? property.title }] : [] },
     twitter: { card: image ? 'summary_large_image' : 'summary', title: `${property.title} | DGR Realty`, description, images: image ? [image] : [] },
   };
@@ -50,6 +52,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
   const property = await getPropertyBySlug(slug);
   if (!property) notFound();
   const contact = getPublicContactDetails();
+  const propertyJsonLd = createPropertyJsonLd(property);
 
   const specs = [
     property.bedrooms != null ? { icon: BedDouble, value: property.bedrooms, label: 'Bedrooms' } : null,
@@ -78,6 +81,10 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
 
   return (
     <main className="min-h-screen bg-[#f8f9f7] pb-20 text-[#202522] lg:pb-0">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(propertyJsonLd) }}
+      />
       <Header />
       <div className="mx-auto max-w-[1440px] px-5 pb-20 pt-5 sm:px-8 lg:px-12 lg:pb-24">
         <div className="flex flex-wrap items-center gap-2 py-3 text-xs text-[#707873]">

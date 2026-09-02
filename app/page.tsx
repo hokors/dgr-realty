@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -20,6 +21,10 @@ import { getProperties } from '@/lib/properties';
 // Property data comes from Supabase when configured. Render at request time so
 // deployments never depend on an external database during the build step.
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
 
 const categoryDetails = [
   { name: 'House', label: 'Houses', image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85' },

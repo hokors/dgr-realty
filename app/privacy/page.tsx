@@ -6,6 +6,7 @@ import { getPublicContactDetails } from '@/lib/contact';
 export const metadata: Metadata = {
   title: 'Privacy Notice',
   description: 'How DGR Realty collects and uses personal information submitted through property inquiries.',
+  alternates: { canonical: '/privacy' },
 };
 
 export default function PrivacyPage() {
