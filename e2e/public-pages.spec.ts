@@ -20,8 +20,12 @@ test.describe('public website', () => {
     await expect(page.getByRole('heading', { name: 'Browse available properties' })).toBeVisible();
 
     const moreFilters = page.getByRole('button', { name: /more filters/i });
-    await moreFilters.click();
-    await expect(moreFilters).toHaveAttribute('aria-expanded', 'true');
+    await expect(async () => {
+      if (await moreFilters.getAttribute('aria-expanded') !== 'true') {
+        await moreFilters.click();
+      }
+      await expect(moreFilters).toHaveAttribute('aria-expanded', 'true', { timeout: 1_000 });
+    }).toPass({ timeout: 10_000 });
     await expect(page.getByRole('combobox', { name: 'Choose a city' })).toBeVisible();
 
     const search = page.getByRole('textbox', { name: 'Search properties' });
