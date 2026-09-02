@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Analytics } from '@vercel/analytics/next';
 import { ScrollAnimations } from '@/components/ScrollAnimations';
 import { getSiteUrl } from '@/lib/site-url';
 import './globals.css';
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <ScrollAnimations />
         {children}
+        <Analytics />
       </body>
     </html>
   );
