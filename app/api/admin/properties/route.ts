@@ -13,6 +13,7 @@ import {
   removeStoragePaths,
 } from '@/lib/admin/property-mutations';
 import { propertyPublicationStatuses, propertyStatuses } from '@/lib/admin/types';
+import { normalizeGoogleMapsLocation } from '@/lib/google-maps';
 
 export const runtime = 'nodejs';
 
@@ -27,6 +28,8 @@ type PropertyInput = {
   location?: unknown;
   city?: unknown;
   province?: unknown;
+  mapLocation?: unknown;
+  showMap?: unknown;
   bedrooms?: unknown;
   bathrooms?: unknown;
   parkingSpaces?: unknown;
@@ -52,7 +55,7 @@ function optionalNumber(value: unknown, integer = false) {
   return number;
 }
 
-function validateProperty(input: PropertyInput | undefined) {
+async function validateProperty(input: PropertyInput | undefined) {
   const title = cleanText(input?.title, 200);
   const description = cleanText(input?.description, 10000);
   const categoryId = isUuid(input?.categoryId) ? input.categoryId : '';
@@ -66,6 +69,7 @@ function validateProperty(input: PropertyInput | undefined) {
     && propertyPublicationStatuses.includes(input.publicationStatus as (typeof propertyPublicationStatuses)[number])
     ? input.publicationStatus
     : '';
+  const mapLocation = await normalizeGoogleMapsLocation(cleanText(input?.mapLocation, 2048));
 
   if (title.length < 2 || !description || !categoryId || !listingType || !Number.isFinite(price) || price < 0 || !location || !city || !province || !status || !publicationStatus) {
     throw new Error('Please complete all required property fields with valid values.');
@@ -81,6 +85,8 @@ function validateProperty(input: PropertyInput | undefined) {
     location,
     city,
     province,
+    map_location: mapLocation || null,
+    show_map: input?.showMap === true,
     bedrooms: optionalNumber(input?.bedrooms, true),
     bathrooms: optionalNumber(input?.bathrooms),
     parking_spaces: optionalNumber(input?.parkingSpaces, true),
@@ -109,9 +115,9 @@ export async function POST(request: Request) {
   const propertyId = create ? (isUuid(body.propertyId) ? body.propertyId : randomUUID()) : (isUuid(body.propertyId) ? body.propertyId : null);
   if (!operationId || !propertyId) return NextResponse.json({ error: 'Invalid property save identifiers.' }, { status: 400 });
 
-  let propertyPayload: ReturnType<typeof validateProperty>;
+  let propertyPayload: Awaited<ReturnType<typeof validateProperty>>;
   try {
-    propertyPayload = validateProperty(body.property);
+    propertyPayload = await validateProperty(body.property);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid property details.' }, { status: 400 });
   }

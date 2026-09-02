@@ -25,6 +25,8 @@ export type AdminProperty = {
   location: string;
   city: string;
   province: string;
+  map_location: string | null;
+  show_map: boolean;
   bedrooms: number | null;
   bathrooms: number | null;
   parking_spaces: number | null;

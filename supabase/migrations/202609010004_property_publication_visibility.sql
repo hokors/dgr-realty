@@ -123,7 +123,9 @@ begin
     )
   loop
     update public.properties
-    set publication_status = v_publication_status
+    set publication_status = v_publication_status,
+        map_location = nullif(trim(p_payload ->> 'map_location'), ''),
+        show_map = coalesce((p_payload ->> 'show_map')::boolean, true)
     where id = v_saved.saved_property_id;
 
     saved_property_id := v_saved.saved_property_id;

@@ -54,8 +54,10 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
   if (!property) notFound();
   const contact = getPublicContactDetails();
   const propertyJsonLd = createPropertyJsonLd(property);
-  const mapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY?.trim();
-  const mapQuery = [property.location, property.city, property.province, 'Philippines'].filter(Boolean).join(', ');
+  const mapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim()
+    || process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY?.trim();
+  const fallbackMapLocation = [property.location, property.city, property.province, 'Philippines'].filter(Boolean).join(', ');
+  const mapQuery = property.mapLocation || fallbackMapLocation;
   const encodedMapQuery = encodeURIComponent(mapQuery);
   const mapEmbedUrl = mapApiKey
     ? `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(mapApiKey)}&q=${encodedMapQuery}`
@@ -138,11 +140,11 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
               <dl className="mt-5 divide-y divide-[#edf0ed]">{propertyDetails.map(([label, value]) => <div key={label} className="flex items-center justify-between gap-5 py-3.5 text-sm"><dt className="text-[#737b76]">{label}</dt><dd className="text-right font-semibold text-[#2b312d]">{value}</dd></div>)}</dl>
             </section>
 
-            <section data-reveal className="mt-6 rounded-2xl border border-[#e1e5e1] bg-white p-6 sm:p-8">
+            {property.showMap && <section data-reveal className="mt-6 rounded-2xl border border-[#e1e5e1] bg-white p-6 sm:p-8">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h2 className="text-xl font-bold tracking-[-0.025em]">Location</h2>
-                  <p className="mt-3 flex items-start gap-2 text-sm text-[#59615c]"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#24634e]" /> {property.location}, {property.city}, {property.province}</p>
+                  <p className="mt-3 flex items-start gap-2 text-sm text-[#59615c]"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#24634e]" /> {mapQuery}</p>
                 </div>
                 <a href={directionsUrl} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[#dce1dd] px-4 py-2.5 text-xs font-bold text-[#24634e] transition hover:bg-[#f2f6f3]">
                   <Navigation className="h-4 w-4" /> Get directions
@@ -164,7 +166,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                   <div><MapPin className="mx-auto h-6 w-6 text-[#24634e]" /><p className="mt-2 text-sm font-semibold">View this location on Google Maps</p><a href={directionsUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-bold text-[#24634e] underline underline-offset-4">Open map</a></div>
                 </div>
               )}
-            </section>
+            </section>}
 
           </div>
 

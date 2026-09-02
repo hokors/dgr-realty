@@ -56,6 +56,7 @@ function mapProperty(row: DatabaseProperty): Property {
     location: row.location,
     city: row.city,
     province: row.province,
+    showMap: false,
     bedrooms: row.bedrooms ?? undefined,
     bathrooms: row.bathrooms ?? undefined,
     parkingSpaces: row.parking_spaces ?? undefined,
@@ -166,7 +167,20 @@ export async function getPropertyBySlug(slug: string): Promise<Property | null> 
       return developmentFallbackOrThrow(`Unable to load Supabase property: ${error.message}`, developmentProperty);
     }
 
-    return data ? mapProperty(data as unknown as DatabaseProperty) : null;
+    if (!data) return null;
+
+    const property = mapProperty(data as unknown as DatabaseProperty);
+    const { data: mapRows, error: mapError } = await client.rpc('get_public_property_map_location', {
+      p_property_id: property.id,
+    });
+    if (mapError) {
+      console.error(`Unable to load the public property map location: ${mapError.message}`);
+      return property;
+    }
+    const mapConfig = (mapRows as Array<{ map_location: string | null }> | null)?.[0];
+    return mapConfig
+      ? { ...property, mapLocation: mapConfig.map_location ?? undefined, showMap: true }
+      : property;
   } catch (error) {
     if (error instanceof PropertyDataUnavailableError) throw error;
     const message = error instanceof Error ? error.message : 'Unknown database error';

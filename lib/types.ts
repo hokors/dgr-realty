@@ -27,6 +27,8 @@ export interface Property {
   location: string;
   city: string;
   province: string;
+  mapLocation?: string;
+  showMap?: boolean;
   bedrooms?: number;
   bathrooms?: number;
   parkingSpaces?: number;

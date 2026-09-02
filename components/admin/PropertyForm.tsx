@@ -295,6 +295,8 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
         location: String(form.get('location') ?? '').trim(),
         city: String(form.get('city') ?? '').trim(),
         province: String(form.get('province') ?? '').trim(),
+        mapLocation: String(form.get('map_location') ?? '').trim() || null,
+        showMap: form.get('show_map') === 'on',
         bedrooms: optionalNumber(form.get('bedrooms')),
         bathrooms: optionalNumber(form.get('bathrooms')),
         parkingSpaces: optionalNumber(form.get('parking_spaces')),
@@ -368,9 +370,11 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
           <section className="rounded-2xl border border-[#dde2de] bg-white p-5 sm:p-7">
             <h2 className="text-lg font-bold">Location</h2>
             <div className="mt-6 grid gap-4 md:grid-cols-3">
-              <label className="md:col-span-3"><span className="field-label">Address or area</span><input name="location" defaultValue={initialProperty?.location} required className={field} placeholder="Subdivision, barangay, or street" /></label>
+              <label className="md:col-span-3"><span className="field-label">Listing location</span><input name="location" defaultValue={initialProperty?.location} required className={field} placeholder="Subdivision, barangay, or street" /><span className="mt-2 block text-xs leading-5 text-[#747c77]">This location is shown publicly in the listing heading.</span></label>
               <label><span className="field-label">City</span><input name="city" defaultValue={initialProperty?.city} required className={field} /></label>
               <label className="md:col-span-2"><span className="field-label">Province</span><input name="province" defaultValue={initialProperty?.province ?? 'Pampanga'} required className={field} /></label>
+              <label className="md:col-span-3"><span className="field-label">Public map location (optional)</span><input name="map_location" defaultValue={initialProperty?.map_location ?? ''} maxLength={2048} className={field} placeholder="Clark Freeport Zone, Pampanga or paste a Google Maps link" /><span className="mt-2 block text-xs leading-5 text-[#747c77]">Enter only the subdivision, barangay, city, or approximate area you want visitors to see. Leave blank to use the listing location above.</span></label>
+              <label className="md:col-span-3 flex items-start gap-3 rounded-xl border border-[#dde2de] p-4"><input name="show_map" type="checkbox" defaultChecked={initialProperty?.show_map ?? true} className="mt-0.5 h-4 w-4 accent-[#24634e]" /><span><span className="block text-sm font-semibold">Show map on public listing</span><span className="mt-1 block text-xs leading-5 text-[#747c77]">Turn this off when the location should not appear on a map.</span></span></label>
             </div>
           </section>
 

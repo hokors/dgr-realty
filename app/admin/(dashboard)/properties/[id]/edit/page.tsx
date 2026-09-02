@@ -20,12 +20,16 @@ export default async function EditPropertyPage({ params }: EditPropertyPageProps
   ]);
 
   if (!property) notFound();
+  const { data: mapRows } = await supabase.rpc('get_admin_property_map_config', { p_property_id: id });
+  const mapConfig = (mapRows as Array<{ map_location: string | null; show_map: boolean }> | null)?.[0];
   const normalized = {
     ...property,
     price: Number(property.price),
     lot_area: property.lot_area === null ? null : Number(property.lot_area),
     floor_area: property.floor_area === null ? null : Number(property.floor_area),
     bathrooms: property.bathrooms === null ? null : Number(property.bathrooms),
+    map_location: mapConfig?.map_location ?? null,
+    show_map: mapConfig?.show_map ?? true,
     property_images: (property.property_images ?? []).map((image) => ({
       ...image,
       image_url: image.storage_path ? `/api/property-images/${image.id}` : image.image_url,

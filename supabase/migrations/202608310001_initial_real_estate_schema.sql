@@ -35,6 +35,8 @@ create table public.properties (
   location text not null,
   city text not null,
   province text not null,
+  map_location text,
+  show_map boolean not null default true,
   bedrooms integer check (bedrooms is null or bedrooms >= 0),
   bathrooms numeric(4,1) check (bathrooms is null or bathrooms >= 0),
   parking_spaces integer check (parking_spaces is null or parking_spaces >= 0),
