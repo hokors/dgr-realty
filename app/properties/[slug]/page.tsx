@@ -14,6 +14,7 @@ import {
   Maximize2,
   MessageCircle,
   MoveDiagonal,
+  Navigation,
   Phone,
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
@@ -53,6 +54,13 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
   if (!property) notFound();
   const contact = getPublicContactDetails();
   const propertyJsonLd = createPropertyJsonLd(property);
+  const mapApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY?.trim();
+  const mapQuery = [property.location, property.city, property.province, 'Philippines'].filter(Boolean).join(', ');
+  const encodedMapQuery = encodeURIComponent(mapQuery);
+  const mapEmbedUrl = mapApiKey
+    ? `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(mapApiKey)}&q=${encodedMapQuery}`
+    : null;
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedMapQuery}`;
 
   const specs = [
     property.bedrooms != null ? { icon: BedDouble, value: property.bedrooms, label: 'Bedrooms' } : null,
@@ -131,9 +139,31 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
             </section>
 
             <section data-reveal className="mt-6 rounded-2xl border border-[#e1e5e1] bg-white p-6 sm:p-8">
-              <h2 className="text-xl font-bold tracking-[-0.025em]">Location</h2>
-              <p className="mt-3 flex items-start gap-2 text-sm text-[#59615c]"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#24634e]" /> {property.location}, {property.city}, {property.province}</p>
-              <div className="mt-5 grid min-h-48 place-items-center rounded-xl bg-[#eef2ef] px-6 text-center"><div><MapPin className="mx-auto h-6 w-6 text-[#24634e]" /><p className="mt-2 text-sm font-semibold">Map integration ready</p><p className="mt-1 text-xs text-[#747c77]">Connect a preferred map provider when location coordinates are available.</p></div></div>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-bold tracking-[-0.025em]">Location</h2>
+                  <p className="mt-3 flex items-start gap-2 text-sm text-[#59615c]"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#24634e]" /> {property.location}, {property.city}, {property.province}</p>
+                </div>
+                <a href={directionsUrl} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[#dce1dd] px-4 py-2.5 text-xs font-bold text-[#24634e] transition hover:bg-[#f2f6f3]">
+                  <Navigation className="h-4 w-4" /> Get directions
+                </a>
+              </div>
+              {mapEmbedUrl ? (
+                <div className="mt-5 overflow-hidden rounded-xl border border-[#dde3df] bg-[#eef2ef]">
+                  <iframe
+                    title={`Map showing ${property.location}, ${property.city}`}
+                    src={mapEmbedUrl}
+                    className="h-[300px] w-full sm:h-[380px]"
+                    loading="lazy"
+                    allowFullScreen
+                    referrerPolicy="strict-origin-when-cross-origin"
+                  />
+                </div>
+              ) : (
+                <div className="mt-5 grid min-h-48 place-items-center rounded-xl bg-[#eef2ef] px-6 text-center">
+                  <div><MapPin className="mx-auto h-6 w-6 text-[#24634e]" /><p className="mt-2 text-sm font-semibold">View this location on Google Maps</p><a href={directionsUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-bold text-[#24634e] underline underline-offset-4">Open map</a></div>
+                </div>
+              )}
             </section>
 
           </div>
