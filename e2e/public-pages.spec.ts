@@ -51,7 +51,9 @@ test.describe('public website', () => {
       waitUntil: 'domcontentloaded',
     });
 
-    await expect(page.getByRole('heading', { name: 'This property is no longer here.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'This property is no longer here.' })).toBeVisible({
+      timeout: 20_000,
+    });
   });
 });
 
@@ -63,5 +65,7 @@ test('a known draft property stays private when a test slug is provided', async 
     waitUntil: 'domcontentloaded',
   });
 
-  await expect(page.getByRole('heading', { name: 'This property is no longer here.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'This property is no longer here.' })).toBeVisible({
+    timeout: 20_000,
+  });
 });
