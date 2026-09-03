@@ -3,6 +3,7 @@ import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { PropertyBrowser } from '@/components/PropertyBrowser';
 import { getProperties } from '@/lib/properties';
+import { propertyFilterSchema } from '@/lib/security/validation';
 
 export const metadata: Metadata = {
   title: 'Browse Properties',
@@ -19,6 +20,14 @@ function valueOf(value: string | string[] | undefined) {
 export default async function PropertiesPage({ searchParams }: { searchParams: SearchParams }) {
   const [properties, query] = await Promise.all([getProperties(), searchParams]);
   const location = valueOf(query.location) ?? '';
+  const parsedFilters = propertyFilterSchema.safeParse({
+    query: valueOf(query.query) ?? location,
+    category: valueOf(query.category) ?? 'All',
+    listingType: valueOf(query.listingType) ?? 'All',
+    minPrice: valueOf(query.minPrice) ?? '',
+    maxPrice: valueOf(query.maxPrice) ?? '',
+    sort: valueOf(query.sort) ?? 'Newest',
+  });
 
   return (
     <main className="min-h-screen bg-[#f8f9f7] text-[#202522]">
@@ -33,14 +42,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
       <section data-reveal className="mx-auto max-w-[1440px] px-5 py-10 sm:px-8 lg:px-12 lg:py-12">
         <PropertyBrowser
           initialProperties={properties}
-          initialFilters={{
-            query: valueOf(query.query) ?? location,
-            category: valueOf(query.category) ?? 'All',
-            listingType: valueOf(query.listingType) ?? 'All',
-            minPrice: valueOf(query.minPrice) ?? '',
-            maxPrice: valueOf(query.maxPrice) ?? '',
-            sort: valueOf(query.sort) ?? 'Newest',
-          }}
+          initialFilters={parsedFilters.success ? parsedFilters.data : undefined}
         />
       </section>
       <Footer />

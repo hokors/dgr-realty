@@ -1,6 +1,16 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
 import { getAdminUser } from '@/lib/admin/auth';
+import { hasValidImageSignature } from '@/lib/security/image-signatures';
+import {
+  consumeRateLimit,
+  createRequestId,
+  getClientIp,
+  hasTrustedMutationOrigin,
+  hashRateLimitIdentifier,
+  securityLog,
+} from '@/lib/security/request';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 
 export const propertyImageBucket = 'property-images';
@@ -23,15 +33,7 @@ export function cleanText(value: unknown, maximumLength: number) {
 }
 
 export function hasValidMutationOrigin(request: Request) {
-  const origin = request.headers.get('origin');
-  if (!origin) return process.env.NODE_ENV !== 'production';
-  try {
-    const originHost = new URL(origin).host;
-    const requestHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? new URL(request.url).host;
-    return originHost === requestHost;
-  } catch {
-    return false;
-  }
+  return hasTrustedMutationOrigin(request);
 }
 
 export async function getAdminMutationContext() {
@@ -39,6 +41,131 @@ export async function getAdminMutationContext() {
   const supabase = createAdminSupabaseClient();
   if (!admin || !supabase) return null;
   return { admin, supabase };
+}
+
+export async function authorizeAdminMutation(
+  request: Request,
+  action: string,
+  limit: number,
+  windowSeconds: number,
+) {
+  const requestId = createRequestId();
+  const route = new URL(request.url).pathname;
+  if (!hasValidMutationOrigin(request)) {
+    securityLog('admin_origin_rejected', { requestId, route, reason: action });
+    return {
+      ok: false as const,
+      response: NextResponse.json({ error: 'Invalid request origin.' }, {
+        status: 403,
+        headers: { 'Cache-Control': 'no-store', 'X-Request-ID': requestId },
+      }),
+    };
+  }
+
+  const context = await getAdminMutationContext();
+  if (!context) {
+    securityLog('admin_auth_rejected', { requestId, route, reason: action });
+    return {
+      ok: false as const,
+      response: NextResponse.json({ error: 'Administrator authentication is required.' }, {
+        status: 401,
+        headers: { 'Cache-Control': 'no-store', 'X-Request-ID': requestId },
+      }),
+    };
+  }
+
+  const rate = await consumeRateLimit(context.supabase, {
+    bucket: `admin:${action}`,
+    identifier: `${context.admin.id}|${getClientIp(request)}`,
+    limit,
+    windowSeconds,
+  });
+  if (rate.unavailable) {
+    securityLog('rate_limit_unavailable', {
+      requestId,
+      route,
+      reason: action,
+      actorHash: hashRateLimitIdentifier(context.admin.id),
+    });
+    return {
+      ok: false as const,
+      response: NextResponse.json({ error: 'This action is temporarily unavailable.' }, {
+        status: 503,
+        headers: { 'Cache-Control': 'no-store', 'Retry-After': String(rate.retryAfter), 'X-Request-ID': requestId },
+      }),
+    };
+  }
+  if (!rate.allowed) {
+    securityLog('rate_limit_exceeded', {
+      requestId,
+      route,
+      reason: action,
+      actorHash: hashRateLimitIdentifier(context.admin.id),
+    });
+    return {
+      ok: false as const,
+      response: NextResponse.json({ error: 'Too many requests. Please wait and try again.' }, {
+        status: 429,
+        headers: { 'Cache-Control': 'no-store', 'Retry-After': String(rate.retryAfter), 'X-Request-ID': requestId },
+      }),
+    };
+  }
+
+  return { ok: true as const, context, requestId };
+}
+
+export async function verifyStoredImage(
+  supabase: SupabaseClient,
+  path: string,
+  expectedContentType: string,
+  expectedSize: number,
+) {
+  const separator = path.lastIndexOf('/');
+  if (separator <= 0) return false;
+  const folder = path.slice(0, separator);
+  const fileName = path.slice(separator + 1);
+  const { data: entries, error: listError } = await supabase.storage
+    .from(propertyImageBucket)
+    .list(folder, { search: fileName, limit: 2 });
+  const entry = entries?.find((item) => item.name === fileName);
+  const metadata = entry?.metadata as { size?: unknown; mimetype?: unknown } | null | undefined;
+  if (
+    listError
+    || !entry
+    || Number(metadata?.size) !== expectedSize
+    || metadata?.mimetype !== expectedContentType
+    || expectedSize <= 0
+    || expectedSize > maximumPropertyImageBytes
+    || !imageExtensions[expectedContentType]
+  ) return false;
+
+  const { data: signed, error: signError } = await supabase.storage
+    .from(propertyImageBucket)
+    .createSignedUrl(path, 60);
+  if (signError || !signed?.signedUrl) return false;
+
+  try {
+    const response = await fetch(signed.signedUrl, {
+      headers: { Range: 'bytes=0-31' },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok || !response.body) return false;
+    const reader = response.body.getReader();
+    const header = new Uint8Array(32);
+    let offset = 0;
+    while (offset < header.length) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const length = Math.min(value.byteLength, header.length - offset);
+      header.set(value.subarray(0, length), offset);
+      offset += length;
+    }
+    await reader.cancel();
+    return hasValidImageSignature(header.subarray(0, offset), expectedContentType);
+  } catch {
+    return false;
+  }
 }
 
 export async function queueStorageCleanup(supabase: SupabaseClient, paths: string[], reason: string, lastError?: string) {

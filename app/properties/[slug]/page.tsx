@@ -25,6 +25,7 @@ import { getPublicContactDetails } from '@/lib/contact';
 import { formatArea, formatDate, formatPrice } from '@/lib/format';
 import { createPropertyJsonLd, serializeJsonLd } from '@/lib/property-json-ld';
 import { getPropertyBySlug } from '@/lib/properties';
+import { propertySlugSchema } from '@/lib/security/validation';
 
 type PropertyPageProps = { params: Promise<{ slug: string }> };
 
@@ -33,6 +34,7 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: PropertyPageProps): Promise<Metadata> {
   const { slug } = await params;
+  if (!propertySlugSchema.safeParse(slug).success) return { title: 'Property not found' };
   const property = await getPropertyBySlug(slug);
   if (!property) return { title: 'Property not found' };
 
@@ -50,6 +52,7 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
 
 export default async function PropertyPage({ params }: PropertyPageProps) {
   const { slug } = await params;
+  if (!propertySlugSchema.safeParse(slug).success) notFound();
   const property = await getPropertyBySlug(slug);
   if (!property) notFound();
   const contact = getPublicContactDetails();

@@ -1,3 +1,4 @@
+import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 import { sampleProperties } from '@/data/sample-properties';
 import { getAbsoluteUrl } from '@/lib/site-url';
@@ -27,7 +28,6 @@ type DatabaseProperty = {
   property_images: Array<{
     id: string;
     image_url: string;
-    storage_path: string | null;
     display_order: number;
     alt_text: string | null;
   }>;
@@ -39,7 +39,7 @@ function mapProperty(row: DatabaseProperty): Property {
     .sort((a, b) => a.display_order - b.display_order)
     .map((item) => ({
       id: item.id,
-      imageUrl: item.storage_path ? getAbsoluteUrl(`/api/property-images/${item.id}`) : item.image_url,
+      imageUrl: getAbsoluteUrl(`/api/property-images/${item.id}`),
       displayOrder: item.display_order,
       altText: item.alt_text ?? undefined,
     }));
@@ -101,7 +101,7 @@ const propertySelect = `
   created_at,
   updated_at,
   property_categories(name),
-  property_images(id, image_url, storage_path, display_order, alt_text),
+  property_images(id, image_url, display_order, alt_text),
   property_amenities(amenities(name))
 `;
 
@@ -109,8 +109,11 @@ const sampleDataEnabled = process.env.NODE_ENV === 'development';
 
 class PropertyDataUnavailableError extends Error {}
 
-function developmentFallbackOrThrow<T>(logMessage: string, fallback: T): T {
-  console.error(logMessage);
+function developmentFallbackOrThrow<T>(context: string, fallback: T, error?: unknown): T {
+  const errorCode = error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
+    ? error.code.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40)
+    : undefined;
+  console.error(context, errorCode ? { errorCode } : undefined);
   if (!sampleDataEnabled) {
     throw new PropertyDataUnavailableError('Property data is currently unavailable.');
   }
@@ -121,7 +124,7 @@ export async function getProperties(): Promise<Property[]> {
   const client = publicClient();
   if (!client) {
     return developmentFallbackOrThrow(
-      'Supabase property configuration is missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+      'Supabase property configuration is missing.',
       sampleProperties,
     );
   }
@@ -134,14 +137,13 @@ export async function getProperties(): Promise<Property[]> {
       .order('created_at', { ascending: false });
 
     if (error) {
-      return developmentFallbackOrThrow(`Unable to load Supabase properties: ${error.message}`, sampleProperties);
+      return developmentFallbackOrThrow('Unable to load Supabase properties.', sampleProperties, error);
     }
 
     return (data as unknown as DatabaseProperty[]).map(mapProperty);
   } catch (error) {
     if (error instanceof PropertyDataUnavailableError) throw error;
-    const message = error instanceof Error ? error.message : 'Unknown database error';
-    return developmentFallbackOrThrow(`Unable to load Supabase properties: ${message}`, sampleProperties);
+    return developmentFallbackOrThrow('Unable to load Supabase properties.', sampleProperties, error);
   }
 }
 
@@ -150,7 +152,7 @@ export async function getPropertyBySlug(slug: string): Promise<Property | null> 
   const developmentProperty = sampleProperties.find((property) => property.slug === slug) ?? null;
   if (!client) {
     return developmentFallbackOrThrow(
-      'Supabase property configuration is missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
+      'Supabase property configuration is missing.',
       developmentProperty,
     );
   }
@@ -164,7 +166,7 @@ export async function getPropertyBySlug(slug: string): Promise<Property | null> 
       .maybeSingle();
 
     if (error) {
-      return developmentFallbackOrThrow(`Unable to load Supabase property: ${error.message}`, developmentProperty);
+      return developmentFallbackOrThrow('Unable to load Supabase property.', developmentProperty, error);
     }
 
     if (!data) return null;
@@ -174,7 +176,7 @@ export async function getPropertyBySlug(slug: string): Promise<Property | null> 
       p_property_id: property.id,
     });
     if (mapError) {
-      console.error(`Unable to load the public property map location: ${mapError.message}`);
+      console.error('Unable to load the public property map location.', { errorCode: mapError.code });
       return property;
     }
     const mapConfig = (mapRows as Array<{ map_location: string | null }> | null)?.[0];
@@ -183,7 +185,6 @@ export async function getPropertyBySlug(slug: string): Promise<Property | null> 
       : property;
   } catch (error) {
     if (error instanceof PropertyDataUnavailableError) throw error;
-    const message = error instanceof Error ? error.message : 'Unknown database error';
-    return developmentFallbackOrThrow(`Unable to load Supabase property: ${message}`, developmentProperty);
+    return developmentFallbackOrThrow('Unable to load Supabase property.', developmentProperty, error);
   }
 }

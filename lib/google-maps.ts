@@ -1,4 +1,6 @@
-const shortGoogleMapsHosts = new Set(['maps.app.goo.gl', 'goo.gl']);
+import 'server-only';
+
+const shortGoogleMapsHosts = new Set(['maps.app.goo.gl']);
 
 function isGoogleMapsHost(hostname: string) {
   const host = hostname.toLowerCase();
@@ -53,15 +55,23 @@ export async function normalizeGoogleMapsLocation(value: string) {
   }
 
   try {
-    const response = await fetch(input, {
-      method: 'GET',
-      redirect: 'follow',
-      cache: 'no-store',
-      signal: AbortSignal.timeout(5000),
-    });
-    const resolvedQuery = queryFromGoogleMapsUrl(response.url);
-    await response.body?.cancel();
-    if (resolvedQuery) return resolvedQuery.slice(0, 2048);
+    let currentUrl = input;
+    for (let redirectCount = 0; redirectCount < 4; redirectCount += 1) {
+      const response = await fetch(currentUrl, {
+        method: 'GET',
+        redirect: 'manual',
+        cache: 'no-store',
+        signal: AbortSignal.timeout(5000),
+      });
+      const location = response.headers.get('location');
+      await response.body?.cancel();
+      if (!location) break;
+      const nextUrl = new URL(location, currentUrl);
+      if (!isGoogleMapsHost(nextUrl.hostname)) throw new Error('Use a Google Maps link or enter a place/address.');
+      const resolvedQuery = queryFromGoogleMapsUrl(nextUrl.href);
+      if (resolvedQuery) return resolvedQuery.slice(0, 2048);
+      currentUrl = nextUrl.href;
+    }
   } catch (error) {
     if (error instanceof Error && error.message.startsWith('Use a Google Maps link')) throw error;
   }

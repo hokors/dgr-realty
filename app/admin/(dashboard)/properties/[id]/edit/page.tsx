@@ -13,7 +13,7 @@ export default async function EditPropertyPage({ params }: EditPropertyPageProps
   const [{ data: property }, { data: categories }] = await Promise.all([
     supabase
       .from('properties')
-      .select('id, title, slug, description, category_id, listing_type, price, price_suffix, location, city, province, bedrooms, bathrooms, parking_spaces, lot_area, floor_area, status, featured, publication_status, created_at, updated_at, property_images(id, image_url, storage_path, alt_text, display_order), property_amenities(amenities(name))')
+      .select('id, title, slug, description, category_id, listing_type, price, price_suffix, location, city, province, bedrooms, bathrooms, parking_spaces, lot_area, floor_area, status, featured, publication_status, created_at, updated_at, property_images(id, image_url, alt_text, display_order), property_amenities(amenities(name))')
       .eq('id', id)
       .maybeSingle(),
     supabase.from('property_categories').select('id, name').eq('active', true).order('display_order'),
@@ -30,10 +30,7 @@ export default async function EditPropertyPage({ params }: EditPropertyPageProps
     bathrooms: property.bathrooms === null ? null : Number(property.bathrooms),
     map_location: mapConfig?.map_location ?? null,
     show_map: mapConfig?.show_map ?? true,
-    property_images: (property.property_images ?? []).map((image) => ({
-      ...image,
-      image_url: image.storage_path ? `/api/property-images/${image.id}` : image.image_url,
-    })),
+    property_images: (property.property_images ?? []).map((image) => ({ ...image, image_url: `/api/property-images/${image.id}` })),
   } as unknown as AdminProperty;
 
   return <PropertyForm categories={(categories as AdminCategory[] | null) ?? []} initialProperty={normalized} />;

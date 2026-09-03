@@ -1,131 +1,146 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { createAdminSupabaseClient, getAdminSupabaseConfigStatus } from '@/lib/supabase/admin';
+import {
+  consumeRateLimit,
+  createRequestId,
+  getClientIp,
+  hasTrustedMutationOrigin,
+  hashRateLimitIdentifier,
+  readJsonBody,
+  RequestBodyError,
+  securityLog,
+} from '@/lib/security/request';
+import { inquirySchema } from '@/lib/security/validation';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
 
-type InquiryPayload = {
-  fullName?: unknown;
-  email?: unknown;
-  phone?: unknown;
-  interest?: unknown;
-  preferredLocation?: unknown;
-  message?: unknown;
-  propertyId?: unknown;
-  propertyTitle?: unknown;
-  source?: unknown;
-  consent?: unknown;
-  website?: unknown;
-  startedAt?: unknown;
-  turnstileToken?: unknown;
-};
-
-function clean(value: unknown, maxLength: number) {
-  return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
-}
-
-function isEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
 async function verifyTurnstile(token: string, ipAddress: string) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret) return process.env.NODE_ENV !== 'production';
-  if (!token) return false;
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  if (!secret && !siteKey) return true;
+  if (!secret || !siteKey || !token) return false;
 
-  const body = new URLSearchParams({
-    secret,
-    response: token,
-    remoteip: ipAddress,
-    idempotency_key: randomUUID(),
-  });
-  const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-    method: 'POST',
-    body,
-    cache: 'no-store',
-  });
-  if (!response.ok) return false;
-  const result = await response.json() as { success?: boolean; action?: string };
-  return result.success === true && result.action === 'inquiry';
+  try {
+    const body = new URLSearchParams({
+      secret,
+      response: token,
+      remoteip: ipAddress,
+      idempotency_key: randomUUID(),
+    });
+    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body,
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!response.ok) return false;
+    const result = await response.json() as { success?: boolean; action?: string };
+    return result.success === true && result.action === 'inquiry';
+  } catch {
+    return false;
+  }
 }
 
-function getClientIp(request: Request) {
-  const forwarded = request.headers.get('x-vercel-forwarded-for')
-    ?? request.headers.get('x-forwarded-for')
-    ?? request.headers.get('x-real-ip')
-    ?? 'unknown';
-  return forwarded.split(',')[0].trim();
+function tooManyRequests(retryAfter: number, requestId: string) {
+  return NextResponse.json({ error: 'Too many inquiries. Please wait a few minutes and try again.' }, {
+    status: 429,
+    headers: { 'Cache-Control': 'no-store', 'Retry-After': String(retryAfter), 'X-Request-ID': requestId },
+  });
 }
 
 export async function POST(request: Request) {
-  let payload: InquiryPayload;
-  try {
-    payload = await request.json() as InquiryPayload;
-  } catch {
-    return NextResponse.json({ error: 'Invalid inquiry request.' }, { status: 400 });
+  const requestId = createRequestId();
+  if (!hasTrustedMutationOrigin(request)) {
+    securityLog('inquiry_origin_rejected', { requestId, route: '/api/inquiries' });
+    return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 });
   }
 
-  // Honeypot submissions are quietly absorbed so bots receive no useful signal.
-  const website = clean(payload.website, 200);
-  const startedAt = Number(payload.startedAt);
-  if (website) return NextResponse.json({ success: true });
-  if (!Number.isFinite(startedAt) || Date.now() - startedAt < 1800) return NextResponse.json({ error: 'Please wait a moment and try again.' }, { status: 400 });
+  let untrustedBody: unknown;
+  try {
+    untrustedBody = await readJsonBody(request, 16 * 1024);
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof RequestBodyError ? error.message : 'Invalid inquiry request.' }, {
+      status: error instanceof RequestBodyError ? error.status : 400,
+    });
+  }
 
-  const fullName = clean(payload.fullName, 120);
-  const email = clean(payload.email, 254).toLowerCase();
-  const phone = clean(payload.phone, 40);
-  const interest = clean(payload.interest, 120);
-  const preferredLocation = clean(payload.preferredLocation, 160);
-  const message = clean(payload.message, 3000);
-  const requestedPropertyId = clean(payload.propertyId, 36);
-  const requestedPropertyTitle = clean(payload.propertyTitle, 200);
-  const source = payload.source === 'property' ? 'property' : 'homepage';
-  const consent = payload.consent === true;
+  // Quietly accept the hidden honeypot so automated senders learn nothing.
+  if (
+    untrustedBody
+    && typeof untrustedBody === 'object'
+    && 'website' in untrustedBody
+    && typeof untrustedBody.website === 'string'
+    && untrustedBody.website.trim()
+  ) {
+    securityLog('inquiry_honeypot_triggered', { requestId, route: '/api/inquiries' });
+    return NextResponse.json({ success: true }, { headers: { 'Cache-Control': 'no-store' } });
+  }
 
-  if (fullName.length < 2 || !isEmail(email) || message.length < 10 || !consent) {
+  const parsed = inquirySchema.safeParse(untrustedBody);
+  if (!parsed.success) {
+    securityLog('inquiry_input_rejected', { requestId, route: '/api/inquiries', reason: 'schema_validation' });
     return NextResponse.json({ error: 'Please complete the required fields and accept the privacy notice.' }, { status: 400 });
+  }
+  const payload = parsed.data;
+  const elapsed = Date.now() - payload.startedAt;
+  if (elapsed < 1_800 || elapsed > 24 * 60 * 60 * 1_000) {
+    securityLog('inquiry_input_rejected', { requestId, route: '/api/inquiries', reason: 'submission_timing' });
+    return NextResponse.json({ error: 'Please refresh the page and try again.' }, { status: 400 });
   }
 
   const supabase = createAdminSupabaseClient();
   if (!supabase) {
-    const config = getAdminSupabaseConfigStatus();
-    const missing = [
-      !config.hasUrl ? 'NEXT_PUBLIC_SUPABASE_URL' : null,
-      !config.hasSecret ? 'SUPABASE_SECRET_KEY' : null,
-    ].filter(Boolean);
-    console.error('Inquiry service configuration is incomplete.', { missing });
-    return NextResponse.json({ error: `This deployment is missing ${missing.join(' and ')}.` }, { status: 503 });
+    securityLog('inquiry_service_unavailable', { requestId, route: '/api/inquiries', reason: 'server_configuration' });
+    return NextResponse.json({ error: 'Inquiry service is temporarily unavailable.' }, { status: 503 });
   }
 
   const ipAddress = getClientIp(request);
-  const userAgent = request.headers.get('user-agent') ?? 'unknown';
-  const fingerprintSalt = process.env.INQUIRY_RATE_LIMIT_SALT
-    ?? process.env.SUPABASE_SECRET_KEY
-    ?? process.env.SUPABASE_SERVICE_ROLE_KEY
-    ?? 'local-development';
-  const fingerprint = createHash('sha256').update(`${fingerprintSalt}|${ipAddress}|${userAgent}`).digest('hex');
-  const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-  const { count, error: rateError } = await supabase
-    .from('inquiries')
-    .select('id', { count: 'exact', head: true })
-    .eq('request_fingerprint', fingerprint)
-    .gte('created_at', fifteenMinutesAgo);
+  const userAgent = (request.headers.get('user-agent') ?? 'unknown').slice(0, 300);
+  const visitorIdentifier = `${ipAddress}|${userAgent}`;
+  const visitorLimit = await consumeRateLimit(supabase, {
+    bucket: 'public:inquiry:visitor',
+    identifier: visitorIdentifier,
+    limit: 4,
+    windowSeconds: 15 * 60,
+  });
+  if (visitorLimit.unavailable) {
+    securityLog('rate_limit_unavailable', { requestId, route: '/api/inquiries', reason: 'inquiry_visitor' });
+    return NextResponse.json({ error: 'Inquiry service is temporarily unavailable.' }, { status: 503 });
+  }
+  if (!visitorLimit.allowed) {
+    securityLog('rate_limit_exceeded', { requestId, route: '/api/inquiries', reason: 'inquiry_visitor' });
+    return tooManyRequests(visitorLimit.retryAfter, requestId);
+  }
 
-  if (rateError) return NextResponse.json({ error: 'Inquiry service is temporarily unavailable.' }, { status: 503 });
-  if ((count ?? 0) >= 4) return NextResponse.json({ error: 'Too many inquiries. Please wait a few minutes and try again.' }, { status: 429 });
+  const emailLimit = await consumeRateLimit(supabase, {
+    bucket: 'public:inquiry:email',
+    identifier: payload.email,
+    limit: 6,
+    windowSeconds: 60 * 60,
+  });
+  if (emailLimit.unavailable) {
+    securityLog('rate_limit_unavailable', { requestId, route: '/api/inquiries', reason: 'inquiry_email' });
+    return NextResponse.json({ error: 'Inquiry service is temporarily unavailable.' }, { status: 503 });
+  }
+  if (!emailLimit.allowed) {
+    securityLog('rate_limit_exceeded', {
+      requestId,
+      route: '/api/inquiries',
+      reason: 'inquiry_email',
+      actorHash: hashRateLimitIdentifier(payload.email),
+    });
+    return tooManyRequests(emailLimit.retryAfter, requestId);
+  }
 
-  const turnstileToken = clean(payload.turnstileToken, 2048);
-  const turnstileVerified = await verifyTurnstile(turnstileToken, ipAddress);
+  const turnstileVerified = await verifyTurnstile(payload.turnstileToken, ipAddress);
   if (!turnstileVerified) {
+    securityLog('inquiry_spam_check_failed', { requestId, route: '/api/inquiries' });
     return NextResponse.json({ error: 'Please complete the spam-protection check and try again.' }, { status: 400 });
   }
 
-  let propertyId: string | null = isUuid(requestedPropertyId) ? requestedPropertyId : null;
-  let propertyTitle = requestedPropertyTitle || null;
+  let propertyId: string | null = payload.propertyId ?? null;
+  let propertyTitle: string | null = null;
   if (propertyId) {
     const { data: property } = await supabase
       .from('properties')
@@ -142,19 +157,21 @@ export async function POST(request: Request) {
     && process.env.INQUIRY_NOTIFICATION_EMAIL
     && process.env.INQUIRY_FROM_EMAIL,
   );
+  const fingerprint = hashRateLimitIdentifier(visitorIdentifier);
+  if (!fingerprint) return NextResponse.json({ error: 'Inquiry service is temporarily unavailable.' }, { status: 503 });
 
   const { data: inquiry, error: insertError } = await supabase
     .from('inquiries')
     .insert({
       property_id: propertyId,
       property_title: propertyTitle,
-      full_name: fullName,
-      email,
-      phone: phone || null,
-      interest: interest || null,
-      preferred_location: preferredLocation || null,
-      message,
-      source,
+      full_name: payload.fullName,
+      email: payload.email,
+      phone: payload.phone || null,
+      interest: payload.interest || null,
+      preferred_location: payload.preferredLocation || null,
+      message: payload.message,
+      source: payload.source,
       privacy_consent: true,
       turnstile_verified: turnstileVerified,
       request_fingerprint: fingerprint,
@@ -164,22 +181,23 @@ export async function POST(request: Request) {
     .single();
 
   if (insertError || !inquiry) {
+    securityLog('inquiry_save_failed', { requestId, route: '/api/inquiries', reason: 'database_insert' });
     return NextResponse.json({ error: 'We could not save your inquiry. Please try again.' }, { status: 500 });
   }
 
   if (resendConfigured) {
     const emailLines = [
-      `New DGR Realty inquiry from ${fullName}`,
+      `New DGR Realty inquiry from ${payload.fullName}`,
       '',
-      `Email: ${email}`,
-      `Phone: ${phone || 'Not provided'}`,
-      `Interest: ${interest || 'Not specified'}`,
-      `Preferred location: ${preferredLocation || 'Not specified'}`,
+      `Email: ${payload.email}`,
+      `Phone: ${payload.phone || 'Not provided'}`,
+      `Interest: ${payload.interest || 'Not specified'}`,
+      `Preferred location: ${payload.preferredLocation || 'Not specified'}`,
       `Property: ${propertyTitle || 'General inquiry'}`,
-      `Source: ${source}`,
+      `Source: ${payload.source}`,
       '',
       'Message:',
-      message,
+      payload.message,
       '',
       `Lead ID: ${inquiry.id}`,
     ];
@@ -196,20 +214,22 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           from: process.env.INQUIRY_FROM_EMAIL,
           to: [process.env.INQUIRY_NOTIFICATION_EMAIL],
-          reply_to: email,
-          subject: propertyTitle ? `Property inquiry: ${propertyTitle}` : `New inquiry from ${fullName}`,
+          reply_to: payload.email,
+          subject: propertyTitle ? `Property inquiry: ${propertyTitle}` : `New inquiry from ${payload.fullName}`,
           text: emailLines.join('\n'),
         }),
         cache: 'no-store',
+        signal: AbortSignal.timeout(10_000),
       });
       notificationStatus = emailResponse.ok ? 'sent' : 'failed';
     } catch {
-      // The lead is already safely stored. A notification outage must not make
-      // visitors resubmit and create duplicate leads.
+      // The lead is stored before notification, so a mail outage never causes duplicates.
     }
 
     await supabase.from('inquiries').update({ notification_status: notificationStatus }).eq('id', inquiry.id);
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true }, {
+    headers: { 'Cache-Control': 'no-store', 'X-Request-ID': requestId },
+  });
 }

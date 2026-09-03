@@ -1,138 +1,81 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import {
-  cleanText,
+  authorizeAdminMutation,
   discardStagedImages,
-  getAdminMutationContext,
-  hasValidMutationOrigin,
   imageExtensions,
-  isUuid,
-  maximumPropertyImages,
   processStorageCleanup,
   propertyImageBucket,
   removeStoragePaths,
+  verifyStoredImage,
 } from '@/lib/admin/property-mutations';
-import { propertyPublicationStatuses, propertyStatuses } from '@/lib/admin/types';
 import { normalizeGoogleMapsLocation } from '@/lib/google-maps';
+import { databaseErrorCode, readJsonBody, RequestBodyError, securityLog } from '@/lib/security/request';
+import { propertySaveSchema } from '@/lib/security/validation';
 
 export const runtime = 'nodejs';
 
-type ImageInput = { kind?: unknown; id?: unknown; path?: unknown };
-type PropertyInput = {
-  title?: unknown;
-  description?: unknown;
-  categoryId?: unknown;
-  listingType?: unknown;
-  price?: unknown;
-  priceSuffix?: unknown;
-  location?: unknown;
-  city?: unknown;
-  province?: unknown;
-  mapLocation?: unknown;
-  showMap?: unknown;
-  bedrooms?: unknown;
-  bathrooms?: unknown;
-  parkingSpaces?: unknown;
-  lotArea?: unknown;
-  floorArea?: unknown;
-  status?: unknown;
-  featured?: unknown;
-  publicationStatus?: unknown;
-};
-type SaveRequest = {
-  operationId?: unknown;
-  propertyId?: unknown;
-  create?: unknown;
-  property?: PropertyInput;
-  amenities?: unknown;
-  images?: unknown;
-};
-
-function optionalNumber(value: unknown, integer = false) {
-  if (value === null || value === undefined || value === '') return null;
-  const number = Number(value);
-  if (!Number.isFinite(number) || number < 0 || (integer && !Number.isInteger(number))) throw new Error('Property measurements must be valid non-negative numbers.');
-  return number;
-}
-
-async function validateProperty(input: PropertyInput | undefined) {
-  const title = cleanText(input?.title, 200);
-  const description = cleanText(input?.description, 10000);
-  const categoryId = isUuid(input?.categoryId) ? input.categoryId : '';
-  const listingType = input?.listingType === 'For Rent' ? 'For Rent' : input?.listingType === 'For Sale' ? 'For Sale' : '';
-  const price = Number(input?.price);
-  const location = cleanText(input?.location, 240);
-  const city = cleanText(input?.city, 120);
-  const province = cleanText(input?.province, 120);
-  const status = typeof input?.status === 'string' && propertyStatuses.includes(input.status as (typeof propertyStatuses)[number]) ? input.status : '';
-  const publicationStatus = typeof input?.publicationStatus === 'string'
-    && propertyPublicationStatuses.includes(input.publicationStatus as (typeof propertyPublicationStatuses)[number])
-    ? input.publicationStatus
-    : '';
-  const mapLocation = await normalizeGoogleMapsLocation(cleanText(input?.mapLocation, 2048));
-
-  if (title.length < 2 || !description || !categoryId || !listingType || !Number.isFinite(price) || price < 0 || !location || !city || !province || !status || !publicationStatus) {
-    throw new Error('Please complete all required property fields with valid values.');
-  }
-
-  return {
-    title,
-    description,
-    category_id: categoryId,
-    listing_type: listingType,
-    price,
-    price_suffix: cleanText(input?.priceSuffix, 80) || null,
-    location,
-    city,
-    province,
-    map_location: mapLocation || null,
-    show_map: input?.showMap === true,
-    bedrooms: optionalNumber(input?.bedrooms, true),
-    bathrooms: optionalNumber(input?.bathrooms),
-    parking_spaces: optionalNumber(input?.parkingSpaces, true),
-    lot_area: optionalNumber(input?.lotArea),
-    floor_area: optionalNumber(input?.floorArea),
-    status,
-    featured: input?.featured === true,
-    publication_status: publicationStatus,
-  };
-}
-
 export async function POST(request: Request) {
-  if (!hasValidMutationOrigin(request)) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 });
-  const context = await getAdminMutationContext();
-  if (!context) return NextResponse.json({ error: 'Administrator authentication and server configuration are required.' }, { status: 401 });
+  const authorization = await authorizeAdminMutation(request, 'property-save', 30, 10 * 60);
+  if (!authorization.ok) return authorization.response;
+  const { context, requestId } = authorization;
 
-  let body: SaveRequest;
+  let untrustedBody: unknown;
   try {
-    body = await request.json() as SaveRequest;
-  } catch {
-    return NextResponse.json({ error: 'Invalid property save request.' }, { status: 400 });
-  }
-
-  const operationId = isUuid(body.operationId) ? body.operationId : null;
-  const create = body.create === true;
-  const propertyId = create ? (isUuid(body.propertyId) ? body.propertyId : randomUUID()) : (isUuid(body.propertyId) ? body.propertyId : null);
-  if (!operationId || !propertyId) return NextResponse.json({ error: 'Invalid property save identifiers.' }, { status: 400 });
-
-  let propertyPayload: Awaited<ReturnType<typeof validateProperty>>;
-  try {
-    propertyPayload = await validateProperty(body.property);
+    untrustedBody = await readJsonBody(request, 64 * 1024);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid property details.' }, { status: 400 });
+    const status = error instanceof RequestBodyError ? error.status : 400;
+    securityLog('admin_input_rejected', { requestId, route: '/api/admin/properties', reason: 'invalid_body' });
+    return NextResponse.json({ error: error instanceof RequestBodyError ? error.message : 'Invalid property save request.' }, { status });
   }
 
-  const amenities = Array.isArray(body.amenities)
-    ? Array.from(new Set(body.amenities.map((item) => cleanText(item, 120)).filter(Boolean))).slice(0, 100)
-    : [];
-  const imageInputs = Array.isArray(body.images) ? body.images as ImageInput[] : [];
-  if (imageInputs.length > maximumPropertyImages) return NextResponse.json({ error: `A property can have at most ${maximumPropertyImages} images.` }, { status: 400 });
+  const parsed = propertySaveSchema.safeParse(untrustedBody);
+  if (!parsed.success) {
+    securityLog('admin_input_rejected', { requestId, route: '/api/admin/properties', reason: 'schema_validation' });
+    return NextResponse.json({ error: 'Please check the property details and try again.' }, { status: 400 });
+  }
+  const body = parsed.data;
+  const operationId = body.operationId;
+  const create = body.create;
+  const propertyId = create ? (body.propertyId ?? randomUUID()) : body.propertyId!;
+
+  let mapLocation: string;
+  try {
+    mapLocation = await normalizeGoogleMapsLocation(body.property.mapLocation ?? '');
+  } catch {
+    securityLog('admin_input_rejected', { requestId, route: '/api/admin/properties', reason: 'invalid_map_location' });
+    return NextResponse.json({ error: 'Use a valid Google Maps place, address, or link.' }, { status: 400 });
+  }
+  const propertyPayload = {
+    title: body.property.title,
+    description: body.property.description,
+    category_id: body.property.categoryId,
+    listing_type: body.property.listingType,
+    price: body.property.price,
+    price_suffix: body.property.priceSuffix || null,
+    location: body.property.location,
+    city: body.property.city,
+    province: body.property.province,
+    map_location: mapLocation || null,
+    show_map: body.property.showMap,
+    bedrooms: body.property.bedrooms,
+    bathrooms: body.property.bathrooms,
+    parking_spaces: body.property.parkingSpaces,
+    lot_area: body.property.lotArea,
+    floor_area: body.property.floorArea,
+    status: body.property.status,
+    featured: body.property.featured,
+    publication_status: body.property.publicationStatus,
+  };
+
+  const amenities = Array.from(new Set(body.amenities));
+  const imageInputs = body.images;
 
   const existingIds: string[] = [];
   const stagedPaths: string[] = [];
   for (const image of imageInputs) {
-    if (image.kind === 'existing' && isUuid(image.id)) existingIds.push(image.id);
-    else if (image.kind === 'staged' && typeof image.path === 'string' && image.path.startsWith(`_staging/${context.admin.id}/`)) stagedPaths.push(image.path);
+    if (image.kind === 'existing') existingIds.push(image.id);
+    else if (image.path.startsWith(`_staging/${context.admin.id}/${operationId}/`)) stagedPaths.push(image.path);
     else return NextResponse.json({ error: 'The property image list is invalid.' }, { status: 400 });
   }
   if (new Set([...existingIds, ...stagedPaths]).size !== imageInputs.length) {
@@ -176,6 +119,27 @@ export async function POST(request: Request) {
   }
   const stagedMap = new Map((stagedRows ?? []).map((row) => [row.path as string, row]));
 
+  let verificationIndex = 0;
+  let stagedImagesValid = true;
+  async function verificationWorker() {
+    while (stagedImagesValid) {
+      const path = stagedPaths[verificationIndex];
+      verificationIndex += 1;
+      if (!path) return;
+      const staged = stagedMap.get(path);
+      if (!staged || !await verifyStoredImage(context.supabase, path, staged.content_type, Number(staged.size_bytes))) {
+        stagedImagesValid = false;
+        return;
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(5, stagedPaths.length) }, () => verificationWorker()));
+  if (!stagedImagesValid) {
+    securityLog('admin_upload_rejected', { requestId, route: '/api/admin/properties', reason: 'content_validation' });
+    await discardStagedImages(context.supabase, context.admin.id, stagedPaths);
+    return NextResponse.json({ error: 'A property image failed security validation. Please upload it again.' }, { status: 400 });
+  }
+
   const movedImages = new Map<string, { id: string; image_url: string; storage_path: string; alt_text: string }>();
   const finalPaths: string[] = [];
   for (const path of stagedPaths) {
@@ -199,7 +163,8 @@ export async function POST(request: Request) {
     if (moveError) {
       await removeStoragePaths(context.supabase, finalPaths, 'Rollback after staged image move failure');
       await discardStagedImages(context.supabase, context.admin.id, stagedPaths);
-      return NextResponse.json({ error: `Unable to finalize a property image: ${moveError.message}` }, { status: 500 });
+      securityLog('admin_property_save_failed', { requestId, route: '/api/admin/properties', reason: 'storage_move', errorCode: databaseErrorCode(moveError) });
+      return NextResponse.json({ error: 'Unable to finalize a property image.' }, { status: 500 });
     }
     finalPaths.push(finalPath);
     const { data: publicImage } = context.supabase.storage.from(propertyImageBucket).getPublicUrl(finalPath);
@@ -218,10 +183,11 @@ export async function POST(request: Request) {
       if (!moved) throw new Error('Staged image metadata is unavailable.');
       return moved;
     });
-  } catch (manifestError) {
+  } catch {
     await removeStoragePaths(context.supabase, finalPaths, 'Rollback after image manifest failure');
     await discardStagedImages(context.supabase, context.admin.id, stagedPaths);
-    return NextResponse.json({ error: manifestError instanceof Error ? manifestError.message : 'Unable to prepare property images.' }, { status: 500 });
+    securityLog('admin_property_save_failed', { requestId, route: '/api/admin/properties', reason: 'image_manifest' });
+    return NextResponse.json({ error: 'Unable to prepare property images.' }, { status: 500 });
   }
 
   const { data: savedRows, error: saveError } = await context.supabase.rpc('save_property_with_publication_atomic', {
@@ -258,7 +224,8 @@ export async function POST(request: Request) {
     }
     // If even the commit check is unavailable, leave the tracked staging rows
     // intact. The next mutation will safely clean them after their expiry.
-    return NextResponse.json({ error: saveError?.message ?? 'Unable to save the property transaction.' }, { status: 500 });
+    securityLog('admin_property_save_failed', { requestId, route: '/api/admin/properties', reason: 'database_transaction', errorCode: databaseErrorCode(saveError) });
+    return NextResponse.json({ error: 'Unable to save the property. Please try again.' }, { status: 500 });
   }
 
   await processStorageCleanup(context.supabase);

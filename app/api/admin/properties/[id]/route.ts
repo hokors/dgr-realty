@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getAdminMutationContext, hasValidMutationOrigin, isUuid, processStorageCleanup } from '@/lib/admin/property-mutations';
-import { propertyPublicationStatuses, propertyStatuses } from '@/lib/admin/types';
+import { authorizeAdminMutation, processStorageCleanup } from '@/lib/admin/property-mutations';
+import { databaseErrorCode, readJsonBody, RequestBodyError, securityLog } from '@/lib/security/request';
+import { propertyQuickUpdateSchema, uuidSchema } from '@/lib/security/validation';
 import type { PropertyPublicationStatus } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -8,39 +9,47 @@ export const runtime = 'nodejs';
 type RouteProps = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: RouteProps) {
-  if (!hasValidMutationOrigin(request)) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 });
-  const context = await getAdminMutationContext();
-  if (!context) return NextResponse.json({ error: 'Administrator authentication and server configuration are required.' }, { status: 401 });
+  const authorization = await authorizeAdminMutation(request, 'property-update', 60, 10 * 60);
+  if (!authorization.ok) return authorization.response;
+  const { context, requestId } = authorization;
   const { id } = await params;
-  if (!isUuid(id)) return NextResponse.json({ error: 'Invalid property identifier.' }, { status: 400 });
+  if (!uuidSchema.safeParse(id).success) return NextResponse.json({ error: 'Invalid property identifier.' }, { status: 400 });
 
-  let body: { status?: unknown; featured?: unknown; publicationStatus?: unknown };
+  let untrustedBody: unknown;
   try {
-    body = await request.json() as typeof body;
-  } catch {
-    return NextResponse.json({ error: 'Invalid property update request.' }, { status: 400 });
+    untrustedBody = await readJsonBody(request, 4 * 1024);
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof RequestBodyError ? error.message : 'Invalid property update request.' }, {
+      status: error instanceof RequestBodyError ? error.status : 400,
+    });
   }
 
-  const updates: { status?: string; featured?: boolean; publication_status?: PropertyPublicationStatus } = {};
-  if (typeof body.status === 'string' && propertyStatuses.includes(body.status as (typeof propertyStatuses)[number])) updates.status = body.status;
-  if (typeof body.featured === 'boolean') updates.featured = body.featured;
-  if (typeof body.publicationStatus === 'string' && propertyPublicationStatuses.includes(body.publicationStatus as PropertyPublicationStatus)) {
-    updates.publication_status = body.publicationStatus as PropertyPublicationStatus;
+  const parsed = propertyQuickUpdateSchema.safeParse(untrustedBody);
+  if (!parsed.success) {
+    securityLog('admin_input_rejected', { requestId, route: '/api/admin/properties/[id]', reason: 'schema_validation' });
+    return NextResponse.json({ error: 'No valid property changes were provided.' }, { status: 400 });
   }
-  if (Object.keys(updates).length === 0) return NextResponse.json({ error: 'No valid property changes were provided.' }, { status: 400 });
+  const body = parsed.data;
+  const updates: { status?: string; featured?: boolean; publication_status?: PropertyPublicationStatus } = {};
+  if (body.status) updates.status = body.status;
+  if (body.featured !== undefined) updates.featured = body.featured;
+  if (body.publicationStatus) updates.publication_status = body.publicationStatus;
 
   const { data, error } = await context.supabase.from('properties').update(updates).eq('id', id).select('id, status, featured, publication_status').maybeSingle();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    securityLog('admin_property_update_failed', { requestId, route: '/api/admin/properties/[id]', reason: 'database_update', errorCode: databaseErrorCode(error) });
+    return NextResponse.json({ error: 'Unable to update the property.' }, { status: 500 });
+  }
   if (!data) return NextResponse.json({ error: 'Property not found.' }, { status: 404 });
   return NextResponse.json({ success: true, property: data });
 }
 
 export async function DELETE(request: Request, { params }: RouteProps) {
-  if (!hasValidMutationOrigin(request)) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 });
-  const context = await getAdminMutationContext();
-  if (!context) return NextResponse.json({ error: 'Administrator authentication and server configuration are required.' }, { status: 401 });
+  const authorization = await authorizeAdminMutation(request, 'property-delete', 20, 10 * 60);
+  if (!authorization.ok) return authorization.response;
+  const { context, requestId } = authorization;
   const { id } = await params;
-  if (!isUuid(id)) return NextResponse.json({ error: 'Invalid property identifier.' }, { status: 400 });
+  if (!uuidSchema.safeParse(id).success) return NextResponse.json({ error: 'Invalid property identifier.' }, { status: 400 });
 
   const { data, error } = await context.supabase.rpc('delete_property_atomic', {
     p_property_id: id,
@@ -58,7 +67,8 @@ export async function DELETE(request: Request, { params }: RouteProps) {
       await processStorageCleanup(context.supabase);
       return NextResponse.json({ success: true, deleted: true, recovered: true });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    securityLog('admin_property_delete_failed', { requestId, route: '/api/admin/properties/[id]', reason: 'database_transaction', errorCode: databaseErrorCode(error) });
+    return NextResponse.json({ error: 'Unable to delete the property.' }, { status: 500 });
   }
   await processStorageCleanup(context.supabase);
   return NextResponse.json({ success: true, deleted: data === true });

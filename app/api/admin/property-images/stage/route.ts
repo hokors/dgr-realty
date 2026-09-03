@@ -1,47 +1,47 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import {
+  authorizeAdminMutation,
   cleanExpiredStaging,
-  cleanText,
   discardStagedImages,
-  getAdminMutationContext,
-  hasValidMutationOrigin,
   imageExtensions,
-  isUuid,
-  maximumPropertyImageBytes,
   processStorageCleanup,
   propertyImageBucket,
 } from '@/lib/admin/property-mutations';
+import { databaseErrorCode, readJsonBody, RequestBodyError, securityLog } from '@/lib/security/request';
+import { imageCleanupSchema, imageStageSchema } from '@/lib/security/validation';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
-  if (!hasValidMutationOrigin(request)) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 });
-  const context = await getAdminMutationContext();
-  if (!context) return NextResponse.json({ error: 'Administrator authentication is required.' }, { status: 401 });
+  const authorization = await authorizeAdminMutation(request, 'image-upload', 180, 10 * 60);
+  if (!authorization.ok) return authorization.response;
+  const { context, requestId } = authorization;
 
-  let body: { draftId?: unknown; name?: unknown; type?: unknown; size?: unknown };
+  let untrustedBody: unknown;
   try {
-    body = await request.json() as typeof body;
-  } catch {
-    return NextResponse.json({ error: 'Invalid image upload request.' }, { status: 400 });
+    untrustedBody = await readJsonBody(request, 4 * 1024);
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof RequestBodyError ? error.message : 'Invalid image upload request.' }, {
+      status: error instanceof RequestBodyError ? error.status : 400,
+    });
   }
 
-  const draftId = isUuid(body.draftId) ? body.draftId : null;
-  const name = cleanText(body.name, 180);
-  const contentType = cleanText(body.type, 80);
-  const size = Number(body.size);
-  const extension = imageExtensions[contentType];
-  if (!draftId || !name || !extension || !Number.isInteger(size) || size <= 0 || size > maximumPropertyImageBytes) {
+  const parsed = imageStageSchema.safeParse(untrustedBody);
+  if (!parsed.success) {
+    securityLog('admin_upload_rejected', { requestId, route: '/api/admin/property-images/stage', reason: 'metadata_validation' });
     return NextResponse.json({ error: 'Use a JPG, PNG, WebP, or AVIF image no larger than 10 MB.' }, { status: 400 });
   }
+  const { draftId, name, type: contentType, size } = parsed.data;
+  const extension = imageExtensions[contentType];
 
   const path = `_staging/${context.admin.id}/${draftId}/${randomUUID()}.${extension}`;
   const { data: signedUpload, error: signError } = await context.supabase.storage
     .from(propertyImageBucket)
     .createSignedUploadUrl(path, { upsert: false });
   if (signError || !signedUpload) {
-    return NextResponse.json({ error: signError?.message ?? 'Unable to prepare the image upload.' }, { status: 500 });
+    securityLog('admin_upload_failed', { requestId, route: '/api/admin/property-images/stage', reason: 'signed_upload', errorCode: databaseErrorCode(signError) });
+    return NextResponse.json({ error: 'Unable to prepare the image upload.' }, { status: 500 });
   }
 
   const { error: stagingError } = await context.supabase.from('property_image_staging').insert({
@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     size_bytes: size,
   });
   if (stagingError) {
+    securityLog('admin_upload_failed', { requestId, route: '/api/admin/property-images/stage', reason: 'staging_record', errorCode: databaseErrorCode(stagingError) });
     return NextResponse.json({ error: 'Unable to register the staged image.' }, { status: 500 });
   }
 
@@ -63,19 +64,24 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  if (!hasValidMutationOrigin(request)) return NextResponse.json({ error: 'Invalid request origin.' }, { status: 403 });
-  const context = await getAdminMutationContext();
-  if (!context) return NextResponse.json({ error: 'Administrator authentication is required.' }, { status: 401 });
+  const authorization = await authorizeAdminMutation(request, 'image-cleanup', 120, 10 * 60);
+  if (!authorization.ok) return authorization.response;
+  const { context, requestId } = authorization;
 
-  let body: { paths?: unknown };
+  let untrustedBody: unknown;
   try {
-    body = await request.json() as typeof body;
-  } catch {
+    untrustedBody = await readJsonBody(request, 20 * 1024);
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof RequestBodyError ? error.message : 'Invalid staged-image cleanup request.' }, {
+      status: error instanceof RequestBodyError ? error.status : 400,
+    });
+  }
+  const parsed = imageCleanupSchema.safeParse(untrustedBody);
+  if (!parsed.success || parsed.data.paths.some((path) => !path.startsWith(`_staging/${context.admin.id}/`))) {
+    securityLog('admin_input_rejected', { requestId, route: '/api/admin/property-images/stage', reason: 'cleanup_paths' });
     return NextResponse.json({ error: 'Invalid staged-image cleanup request.' }, { status: 400 });
   }
-  const paths = Array.isArray(body.paths)
-    ? body.paths.filter((path): path is string => typeof path === 'string' && path.startsWith(`_staging/${context.admin.id}/`)).slice(0, 30)
-    : [];
+  const paths = parsed.data.paths;
   await discardStagedImages(context.supabase, context.admin.id, paths);
   return NextResponse.json({ success: true });
 }

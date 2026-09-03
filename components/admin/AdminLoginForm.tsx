@@ -3,7 +3,6 @@
 import { FormEvent, useState } from 'react';
 import { LoaderCircle, LockKeyhole } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 
 export function AdminLoginForm() {
   const router = useRouter();
@@ -15,40 +14,24 @@ export function AdminLoginForm() {
     setError('');
     setLoading(true);
 
-    const supabase = createBrowserSupabaseClient();
-    if (!supabase) {
-      setError('Supabase environment variables are not configured.');
-      setLoading(false);
-      return;
-    }
-
     const form = new FormData(event.currentTarget);
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email: String(form.get('email') ?? ''),
-      password: String(form.get('password') ?? ''),
-    });
-
-    if (authError || !data.user) {
-      setError(authError?.message ?? 'Unable to sign in.');
+    try {
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: String(form.get('email') ?? ''),
+          password: String(form.get('password') ?? ''),
+        }),
+      });
+      const result = await response.json() as { success?: boolean; error?: string };
+      if (!response.ok || !result.success) throw new Error(result.error ?? 'Unable to sign in.');
+      router.replace('/admin');
+      router.refresh();
+    } catch (signInError) {
+      setError(signInError instanceof Error ? signInError.message : 'Unable to sign in.');
       setLoading(false);
-      return;
     }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', data.user.id)
-      .maybeSingle();
-
-    if (profileError || profile?.role !== 'admin') {
-      await supabase.auth.signOut();
-      setError('This account is not authorized to access the admin dashboard.');
-      setLoading(false);
-      return;
-    }
-
-    router.replace('/admin');
-    router.refresh();
   }
 
   return (

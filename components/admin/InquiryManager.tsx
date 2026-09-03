@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import { CheckCircle2, Clock3, Mail, Search } from 'lucide-react';
-import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 
 export type InquiryRow = {
   id: string;
@@ -36,12 +35,19 @@ export function InquiryManager({ initialInquiries }: { initialInquiries: Inquiry
   }, [inquiries, query, status]);
 
   async function updateStatus(id: string, nextStatus: InquiryRow['status']) {
-    const supabase = createBrowserSupabaseClient();
-    if (!supabase) return;
     setMessage('');
-    const { error } = await supabase.from('inquiries').update({ status: nextStatus }).eq('id', id);
-    if (error) setMessage(error.message);
-    else setInquiries((rows) => rows.map((row) => row.id === id ? { ...row, status: nextStatus } : row));
+    try {
+      const response = await fetch(`/api/admin/inquiries/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      const result = await response.json() as { success?: boolean; error?: string };
+      if (!response.ok || !result.success) throw new Error(result.error ?? 'Unable to update the inquiry.');
+      setInquiries((rows) => rows.map((row) => row.id === id ? { ...row, status: nextStatus } : row));
+    } catch (updateError) {
+      setMessage(updateError instanceof Error ? updateError.message : 'Unable to update the inquiry.');
+    }
   }
 
   return (
