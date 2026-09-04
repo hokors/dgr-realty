@@ -2,6 +2,7 @@ import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 import { sampleProperties } from '@/data/sample-properties';
 import { getAbsoluteUrl } from '@/lib/site-url';
+import { normalizePropertyContent } from '@/lib/property-quality';
 import type { Property, PropertyImage } from '@/lib/types';
 
 type DatabaseProperty = {
@@ -35,6 +36,15 @@ type DatabaseProperty = {
 };
 
 function mapProperty(row: DatabaseProperty): Property {
+  const content = normalizePropertyContent({
+    title: row.title,
+    description: row.description ?? '',
+    listingType: row.listing_type,
+    priceSuffix: row.price_suffix,
+    location: row.location,
+    city: row.city,
+    province: row.province,
+  });
   const images: PropertyImage[] = [...(row.property_images ?? [])]
     .sort((a, b) => a.display_order - b.display_order)
     .map((item) => ({
@@ -46,16 +56,16 @@ function mapProperty(row: DatabaseProperty): Property {
 
   return {
     id: row.id,
-    title: row.title,
+    title: content.title,
     slug: row.slug,
-    description: row.description ?? '',
+    description: content.description,
     category: row.property_categories?.name ?? 'Uncategorized',
     listingType: row.listing_type,
     price: Number(row.price),
-    priceSuffix: row.price_suffix ?? undefined,
-    location: row.location,
-    city: row.city,
-    province: row.province,
+    priceSuffix: content.priceSuffix ?? undefined,
+    location: content.location,
+    city: content.city,
+    province: content.province,
     showMap: false,
     bedrooms: row.bedrooms ?? undefined,
     bathrooms: row.bathrooms ?? undefined,

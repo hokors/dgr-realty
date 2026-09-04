@@ -4,11 +4,7 @@ import { Menu, X } from 'lucide-react';
 const navigation = [
   ['/', 'Home'],
   ['/properties', 'Properties'],
-  ['/properties?category=House', 'House'],
-  ['/properties?category=Condominium', 'Condo'],
-  ['/properties?category=Lot', 'Lots'],
-  ['/properties?category=Commercial', 'Commercial'],
-  ['/properties?category=Rentals', 'Rentals'],
+  ['/#about', 'About'],
   ['/#contact', 'Contact'],
 ];
 
@@ -20,7 +16,7 @@ export function Header() {
           DGR Realty
         </Link>
 
-        <nav className="hidden items-center gap-6 text-[13px] font-medium xl:flex" aria-label="Primary navigation">
+        <nav className="hidden items-center gap-8 text-[13px] font-medium md:flex" aria-label="Primary navigation">
           {navigation.map(([href, label]) => (
             <Link key={`${href}-${label}`} className="transition-colors hover:text-[#2f6b55]" href={href}>{label}</Link>
           ))}
@@ -30,7 +26,7 @@ export function Header() {
           <Link href="/#contact" className="hidden rounded-full bg-[#24634e] px-5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-[#1b4f3e] sm:inline-flex">
             List a property
           </Link>
-          <details className="mobile-menu relative xl:hidden">
+          <details className="mobile-menu relative md:hidden">
             <summary className="grid h-10 w-10 place-items-center rounded-full border border-[#dfe2de] bg-white text-[#202522]">
               <Menu className="menu-open h-4 w-4" aria-hidden="true" />
               <X className="menu-close hidden h-4 w-4" aria-hidden="true" />

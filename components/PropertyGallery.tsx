@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, ImageIcon, Maximize, X } from 'lucide-react';
 import type { PropertyImage } from '@/lib/types';
@@ -8,7 +8,15 @@ import type { PropertyImage } from '@/lib/types';
 export function PropertyGallery({ images, title }: { images: PropertyImage[]; title: string }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const galleryDialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const openerRef = useRef<HTMLButtonElement | null>(null);
   const activeImage = images[activeIndex];
+
+  function openGallery(event: React.MouseEvent<HTMLButtonElement>) {
+    openerRef.current = event.currentTarget;
+    setLightboxOpen(true);
+  }
 
   const showPrevious = useCallback(() => {
     setActiveIndex((index) => (index - 1 + images.length) % images.length);
@@ -24,18 +32,33 @@ export function PropertyGallery({ images, title }: { images: PropertyImage[]; ti
       if (event.key === 'Escape') setLightboxOpen(false);
       if (event.key === 'ArrowLeft' && images.length > 1) showPrevious();
       if (event.key === 'ArrowRight' && images.length > 1) showNext();
+      if (event.key === 'Tab') {
+        const focusable = galleryDialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])');
+        if (!focusable?.length) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     }
     document.body.style.overflow = 'hidden';
+    window.requestAnimationFrame(() => closeButtonRef.current?.focus());
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
+      openerRef.current?.focus();
     };
   }, [images.length, lightboxOpen, showNext, showPrevious]);
 
   if (!activeImage) {
     return (
-      <section data-reveal className="grid min-h-[420px] place-items-center overflow-hidden rounded-3xl border border-[#dfe4e0] bg-[#e9eeea] px-6 text-center lg:min-h-[560px]">
+      <section data-reveal className="grid min-h-[360px] place-items-center overflow-hidden rounded-2xl border border-[#dfe4e0] bg-[#e9eeea] px-6 text-center lg:min-h-[560px]">
         <div><div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-white text-[#6f7a73] shadow-sm"><ImageIcon className="h-6 w-6" /></div><p className="mt-5 font-semibold">Property photos coming soon</p><p className="mt-2 text-sm text-[#707a74]">Contact DGR Realty to request photos of this listing.</p></div>
       </section>
     );
@@ -43,9 +66,9 @@ export function PropertyGallery({ images, title }: { images: PropertyImage[]; ti
 
   return (
     <>
-      <section data-reveal aria-label={`${title} photo gallery`} className="overflow-hidden rounded-3xl border border-[#dfe4e0] bg-white shadow-[0_14px_45px_rgba(30,39,34,0.07)]">
+      <section data-reveal aria-label={`${title} photo gallery`} className="overflow-hidden rounded-2xl border border-[#dfe4e0] bg-white shadow-[0_10px_34px_rgba(30,39,34,0.06)]">
         <div className="grid gap-2 bg-[#e6ebe7] p-2 lg:h-[610px] lg:grid-cols-[minmax(0,1fr)_270px]">
-          <button type="button" onClick={() => setLightboxOpen(true)} className="group relative min-h-[360px] overflow-hidden rounded-2xl bg-[#dfe5e0] text-left lg:min-h-0" aria-label="Open full-screen photo gallery">
+          <button type="button" onClick={openGallery} className="group relative min-h-[330px] overflow-hidden rounded-xl bg-[#dfe5e0] text-left sm:min-h-[360px] lg:min-h-0" aria-label="Open full-screen photo gallery">
             <Image src={activeImage.imageUrl} alt={activeImage.altText ?? `${title} photo ${activeIndex + 1}`} fill priority unoptimized sizes="(max-width: 1024px) 100vw, 75vw" className="object-cover transition duration-500 group-hover:scale-[1.015]" />
             <div className="absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-black/55 via-black/10 to-transparent p-4 pt-20 text-white sm:p-5">
               <span className="rounded-full bg-black/35 px-3 py-1.5 text-xs font-semibold backdrop-blur-md">{activeIndex + 1} / {images.length}</span>
@@ -74,13 +97,13 @@ export function PropertyGallery({ images, title }: { images: PropertyImage[]; ti
       </section>
 
       {lightboxOpen && (
-        <div role="dialog" aria-modal="true" aria-label={`${title} full-screen gallery`} className="fixed inset-0 z-[100] grid place-items-center bg-[#101411]/96 p-4 sm:p-8">
-          <button type="button" onClick={() => setLightboxOpen(false)} className="absolute right-4 top-4 z-10 grid h-11 w-11 place-items-center rounded-full bg-white/12 text-white backdrop-blur hover:bg-white/20" aria-label="Close gallery"><X className="h-5 w-5" /></button>
+        <div ref={galleryDialogRef} role="dialog" aria-modal="true" aria-label={`${title} full-screen gallery`} tabIndex={-1} className="fixed inset-0 z-[100] grid place-items-center bg-[#101411]/96 p-4 sm:p-8">
+          <button ref={closeButtonRef} type="button" onClick={() => setLightboxOpen(false)} className="absolute right-4 top-4 z-10 grid h-11 w-11 place-items-center rounded-full bg-white/12 text-white backdrop-blur hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white" aria-label="Close gallery"><X className="h-5 w-5" /></button>
           <div className="relative h-full w-full max-w-[1500px]">
             <Image src={activeImage.imageUrl} alt={activeImage.altText ?? `${title} photo ${activeIndex + 1}`} fill unoptimized sizes="100vw" className="object-contain" />
           </div>
           {images.length > 1 && <><button type="button" onClick={showPrevious} className="absolute left-3 top-1/2 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-white/12 text-white backdrop-blur hover:bg-white/20 sm:left-6" aria-label="Previous photo"><ChevronLeft className="h-6 w-6" /></button><button type="button" onClick={showNext} className="absolute right-3 top-1/2 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-white/12 text-white backdrop-blur hover:bg-white/20 sm:right-6" aria-label="Next photo"><ChevronRight className="h-6 w-6" /></button></>}
-          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/35 px-4 py-2 text-xs font-semibold text-white backdrop-blur">Photo {activeIndex + 1} of {images.length}</p>
+          <p aria-live="polite" className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/35 px-4 py-2 text-xs font-semibold text-white backdrop-blur">Photo {activeIndex + 1} of {images.length}</p>
         </div>
       )}
     </>

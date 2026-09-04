@@ -85,7 +85,7 @@ export function PropertyBrowser({ initialProperties, initialFilters = {} }: { in
 
   return (
     <div>
-      <section aria-label="Property filters" className="rounded-3xl border border-[#dde3de] bg-white p-3 shadow-[0_16px_50px_rgba(29,39,33,0.07)] sm:p-4">
+      <section aria-label="Property filters" className="rounded-2xl border border-[#dde3de] bg-white p-3 shadow-[0_10px_32px_rgba(29,39,33,0.06)] sm:p-4">
         <div className="grid gap-3 xl:grid-cols-[minmax(300px,1fr)_auto_auto_auto] xl:items-center">
           <label className="relative block">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#66716a]" />
@@ -149,7 +149,7 @@ export function PropertyBrowser({ initialProperties, initialFilters = {} }: { in
       {properties.length > 0 ? (
         <div className="mt-5 grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{properties.map((property, index) => <PropertyCard key={property.id} property={property} priority={index < 4} />)}</div>
       ) : (
-        <div className="mt-5 rounded-3xl border border-dashed border-[#ccd5cf] bg-white px-6 py-24 text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#edf3ef] text-[#24634e]"><Search className="h-5 w-5" /></div><p className="display mt-5 text-3xl text-[#202522]">No matching properties yet.</p><p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#69716c]">Try widening your location, price, or room filters. New listings are added regularly.</p><button type="button" onClick={() => setFilters(defaults)} className="mt-6 rounded-xl bg-[#24634e] px-5 py-3 text-sm font-semibold text-white">Reset all filters</button></div>
+        <div className="mt-5 rounded-2xl border border-dashed border-[#ccd5cf] bg-white px-6 py-20 text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-[#edf3ef] text-[#24634e]"><Search className="h-5 w-5" /></div><p className="display mt-5 text-3xl text-[#202522]">No matching properties yet.</p><p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#606963]">Try widening your location, price, or room filters. New listings are added regularly.</p><button type="button" onClick={() => setFilters(defaults)} className="mt-6 rounded-xl bg-[#24634e] px-5 py-3 text-sm font-semibold text-white">Reset all filters</button></div>
       )}
     </div>
   );

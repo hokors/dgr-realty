@@ -51,8 +51,10 @@ export function PropertyManager({ initialProperties }: { initialProperties: Prop
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
       });
-      const result = await response.json() as { success?: boolean; error?: string };
-      if (!response.ok || !result.success) throw new Error(result.error ?? 'Unable to update the property.');
+      const result = await response.json() as { success?: boolean; error?: string; issues?: string[] };
+      if (!response.ok || !result.success) {
+        throw new Error([result.error, ...(result.issues ?? [])].filter(Boolean).join(' ') || 'Unable to update the property.');
+      }
       setProperties((rows) => rows.map((row) => row.id === id
         ? {
             ...row,

@@ -10,6 +10,7 @@ import {
   verifyStoredImage,
 } from '@/lib/admin/property-mutations';
 import { normalizeGoogleMapsLocation } from '@/lib/google-maps';
+import { getPublicationQualityIssues, normalizePropertyContent } from '@/lib/property-quality';
 import { databaseErrorCode, readJsonBody, RequestBodyError, securityLog } from '@/lib/security/request';
 import { propertySaveSchema } from '@/lib/security/validation';
 
@@ -38,34 +39,48 @@ export async function POST(request: Request) {
   const operationId = body.operationId;
   const create = body.create;
   const propertyId = create ? (body.propertyId ?? randomUUID()) : body.propertyId!;
+  const normalizedProperty = normalizePropertyContent(body.property);
+  const qualityIssues = normalizedProperty.publicationStatus === 'published'
+    ? getPublicationQualityIssues({
+        ...normalizedProperty,
+        imageCount: body.images.length,
+      })
+    : [];
+  if (qualityIssues.length > 0) {
+    securityLog('admin_input_rejected', { requestId, route: '/api/admin/properties', reason: 'publication_quality' });
+    return NextResponse.json({
+      error: 'This listing is not ready to publish yet.',
+      issues: qualityIssues,
+    }, { status: 422 });
+  }
 
   let mapLocation: string;
   try {
-    mapLocation = await normalizeGoogleMapsLocation(body.property.mapLocation ?? '');
+    mapLocation = await normalizeGoogleMapsLocation(normalizedProperty.mapLocation ?? '');
   } catch {
     securityLog('admin_input_rejected', { requestId, route: '/api/admin/properties', reason: 'invalid_map_location' });
     return NextResponse.json({ error: 'Use a valid Google Maps place, address, or link.' }, { status: 400 });
   }
   const propertyPayload = {
-    title: body.property.title,
-    description: body.property.description,
-    category_id: body.property.categoryId,
-    listing_type: body.property.listingType,
-    price: body.property.price,
-    price_suffix: body.property.priceSuffix || null,
-    location: body.property.location,
-    city: body.property.city,
-    province: body.property.province,
+    title: normalizedProperty.title,
+    description: normalizedProperty.description,
+    category_id: normalizedProperty.categoryId,
+    listing_type: normalizedProperty.listingType,
+    price: normalizedProperty.price,
+    price_suffix: normalizedProperty.priceSuffix ?? null,
+    location: normalizedProperty.location,
+    city: normalizedProperty.city,
+    province: normalizedProperty.province,
     map_location: mapLocation || null,
-    show_map: body.property.showMap,
-    bedrooms: body.property.bedrooms,
-    bathrooms: body.property.bathrooms,
-    parking_spaces: body.property.parkingSpaces,
-    lot_area: body.property.lotArea,
-    floor_area: body.property.floorArea,
-    status: body.property.status,
-    featured: body.property.featured,
-    publication_status: body.property.publicationStatus,
+    show_map: normalizedProperty.showMap,
+    bedrooms: normalizedProperty.bedrooms,
+    bathrooms: normalizedProperty.bathrooms,
+    parking_spaces: normalizedProperty.parkingSpaces,
+    lot_area: normalizedProperty.lotArea,
+    floor_area: normalizedProperty.floorArea,
+    status: normalizedProperty.status,
+    featured: normalizedProperty.featured,
+    publication_status: normalizedProperty.publicationStatus,
   };
 
   const amenities = Array.from(new Set(body.amenities));

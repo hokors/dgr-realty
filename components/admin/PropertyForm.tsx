@@ -3,13 +3,21 @@
 import { ChangeEvent, DragEvent, FormEvent, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowDown, ArrowLeft, ArrowUp, GripVertical, ImagePlus, LoaderCircle, Save, Star, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, CheckCircle2, GripVertical, ImagePlus, LoaderCircle, Save, Star, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { adminCategories, propertyPublicationStatuses, propertyStatuses, type AdminCategory, type AdminImage, type AdminProperty } from '@/lib/admin/types';
+import {
+  getPublicationQualityIssues,
+  minimumFeaturedPhotos,
+  minimumPhotoLongEdge,
+  minimumPhotoShortEdge,
+  minimumPublishedPhotos,
+} from '@/lib/property-quality';
+import type { ListingType, PropertyPublicationStatus } from '@/lib/types';
 
 type ExistingImageItem = { kind: 'existing'; key: string; image: AdminImage; previewUrl: string };
-type NewImageItem = { kind: 'new'; key: string; file: File; previewUrl: string };
+type NewImageItem = { kind: 'new'; key: string; file: File; previewUrl: string; width?: number; height?: number };
 type ImageItem = ExistingImageItem | NewImageItem;
 type SaveProgress = { label: string; current?: number; total?: number };
 
@@ -75,6 +83,18 @@ async function optimizeImage(file: File) {
   }
 }
 
+async function readImageDimensions(file: File) {
+  if (typeof createImageBitmap !== 'function') return null;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const dimensions = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return dimensions;
+  } catch {
+    return null;
+  }
+}
+
 function optionalNumber(value: FormDataEntryValue | null) {
   if (value === null || String(value).trim() === '') return null;
   const number = Number(value);
@@ -91,28 +111,46 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
   const [operationId] = useState(() => crypto.randomUUID());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [qualityIssues, setQualityIssues] = useState<string[]>([]);
   const [saveProgress, setSaveProgress] = useState<SaveProgress | null>(null);
   const [draggedImageKey, setDraggedImageKey] = useState<string | null>(null);
   const [dragTargetKey, setDragTargetKey] = useState<string | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<Record<string, { width: number; height: number }>>({});
 
   const allowedCategories = categories.filter((category) => adminCategories.includes(category.name as (typeof adminCategories)[number]));
   const amenities = initialProperty?.property_amenities.map((item) => item.amenities?.name).filter((name): name is string => Boolean(name)).join(', ') ?? '';
 
-  function addImages(event: ChangeEvent<HTMLInputElement>) {
+  async function addImages(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    setError('');
     const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
     const accepted = files.filter((file) => allowedTypes.has(file.type) && file.size > 0 && file.size <= 10 * 1024 * 1024);
     if (accepted.length !== files.length) setError('Use JPG, PNG, WebP, or AVIF images no larger than 10 MB.');
     if (images.length + accepted.length > 30) {
       setError('A property can have at most 30 photos.');
-      event.target.value = '';
       return;
+    }
+    const inspected = await Promise.all(accepted.map(async (file) => ({ file, dimensions: await readImageDimensions(file) })));
+    const usable = inspected.filter(({ dimensions }) => !dimensions || (
+      Math.max(dimensions.width, dimensions.height) >= minimumPhotoLongEdge
+      && Math.min(dimensions.width, dimensions.height) >= minimumPhotoShortEdge
+    ));
+    if (usable.length !== inspected.length) {
+      const skipped = inspected.length - usable.length;
+      setError(`${skipped} low-resolution ${skipped === 1 ? 'photo was' : 'photos were'} skipped. Use images at least ${minimumPhotoLongEdge}×${minimumPhotoShortEdge} pixels.`);
     }
     setImages((current) => [
       ...current,
-      ...accepted.map<NewImageItem>((file) => ({ kind: 'new', key: `new-${crypto.randomUUID()}`, file, previewUrl: URL.createObjectURL(file) })),
+      ...usable.map<NewImageItem>(({ file, dimensions }) => ({
+        kind: 'new',
+        key: `new-${crypto.randomUUID()}`,
+        file,
+        previewUrl: URL.createObjectURL(file),
+        width: dimensions?.width,
+        height: dimensions?.height,
+      })),
     ]);
-    event.target.value = '';
   }
 
   function moveImage(index: number, direction: -1 | 1) {
@@ -276,12 +314,39 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
     event.preventDefault();
     setSaving(true);
     setError('');
+    setQualityIssues([]);
     setSaveProgress({ label: 'Preparing property photos…' });
 
     let stagedPaths: string[] = [];
     try {
       const form = new FormData(event.currentTarget);
       const title = String(form.get('title') ?? '').trim();
+      const listingType = String(form.get('listing_type') ?? 'For Sale') as ListingType;
+      const publicationStatus = String(form.get('publication_status') ?? 'draft') as PropertyPublicationStatus;
+      const featured = form.get('featured') === 'on';
+      if (publicationStatus === 'published') {
+        const mainImage = images[0];
+        const mainDimensions = mainImage?.kind === 'new'
+          ? { width: mainImage.width, height: mainImage.height }
+          : imageDimensions[mainImage?.key ?? ''];
+        const issues = getPublicationQualityIssues({
+          title,
+          description: String(form.get('description') ?? '').trim(),
+          listingType,
+          priceSuffix: String(form.get('price_suffix') ?? '').trim() || null,
+          location: String(form.get('location') ?? '').trim(),
+          city: String(form.get('city') ?? '').trim(),
+          province: String(form.get('province') ?? '').trim(),
+          featured,
+          imageCount: images.length,
+          mainPhotoWidth: mainDimensions?.width,
+          mainPhotoHeight: mainDimensions?.height,
+        });
+        if (issues.length > 0) {
+          setQualityIssues(issues);
+          throw new Error('Complete the listing quality checks before publishing.');
+        }
+      }
       const { stagedByKey, stagedPaths: uploadedPaths } = await stageNewImages();
       stagedPaths = uploadedPaths;
       setSaveProgress({ label: 'Saving property details…' });
@@ -289,7 +354,7 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
         title,
         description: String(form.get('description') ?? '').trim(),
         categoryId: String(form.get('category_id') ?? ''),
-        listingType: String(form.get('listing_type') ?? 'For Sale'),
+        listingType,
         price: Number(form.get('price') ?? 0),
         priceSuffix: String(form.get('price_suffix') ?? '').trim() || null,
         location: String(form.get('location') ?? '').trim(),
@@ -303,8 +368,8 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
         lotArea: optionalNumber(form.get('lot_area')),
         floorArea: optionalNumber(form.get('floor_area')),
         status: String(form.get('status') ?? 'Available'),
-        featured: form.get('featured') === 'on',
-        publicationStatus: String(form.get('publication_status') ?? 'draft'),
+        featured,
+        publicationStatus,
       };
       const amenitiesList = Array.from(new Set(String(form.get('amenities') ?? '').split(/[,\n]/).map((item) => item.trim()).filter(Boolean)));
       const imageManifest = images.map((item) => item.kind === 'existing'
@@ -323,8 +388,11 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
           images: imageManifest,
         }),
       });
-      const result = await response.json() as { success?: boolean; error?: string };
-      if (!response.ok || !result.success) throw new Error(result.error ?? 'Unable to save this property.');
+      const result = await response.json() as { success?: boolean; error?: string; issues?: string[] };
+      if (!response.ok || !result.success) {
+        if (result.issues?.length) setQualityIssues(result.issues);
+        throw new Error(result.error ?? 'Unable to save this property.');
+      }
       router.push('/admin/properties');
       router.refresh();
     } catch (saveError) {
@@ -351,6 +419,7 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
       </div>
 
       {error && <p className="mt-5 rounded-xl bg-[#fae8e6] px-4 py-3 text-sm text-[#923f38]" role="alert">{error}</p>}
+      {qualityIssues.length > 0 && <div className="mt-3 rounded-xl border border-[#e6c9c4] bg-[#fff7f5] px-4 py-4 text-sm text-[#7e3832]" role="alert"><p className="font-bold">Before this listing can be published:</p><ul className="mt-2 list-disc space-y-1 pl-5">{qualityIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul></div>}
       {saving && saveProgress && <div className="mt-5 rounded-xl border border-[#cfe0d7] bg-[#edf5f0] px-4 py-3" role="status" aria-live="polite"><div className="flex items-center justify-between gap-4 text-sm font-semibold text-[#285946]"><span>{saveProgress.label}</span>{saveProgress.total != null && <span>{Math.round(((saveProgress.current ?? 0) / saveProgress.total) * 100)}%</span>}</div>{saveProgress.total != null && <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#d3e4da]"><div className="h-full rounded-full bg-[#24634e] transition-[width] duration-300" style={{ width: `${((saveProgress.current ?? 0) / saveProgress.total) * 100}%` }} /></div>}</div>}
 
       <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
@@ -358,23 +427,23 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
           <section className="rounded-2xl border border-[#dde2de] bg-white p-5 sm:p-7">
             <h2 className="text-lg font-bold">Basic information</h2>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <label className="md:col-span-2"><span className="field-label">Property title</span><input name="title" defaultValue={initialProperty?.title} required className={field} placeholder="e.g. Modern family home in Angeles City" /></label>
+              <label className="md:col-span-2"><span className="field-label">Property title</span><input name="title" defaultValue={initialProperty?.title} required maxLength={120} className={field} placeholder="e.g. Modern family home in Angeles City" /><span className="mt-2 block text-xs leading-5 text-[#68716b]">Use a location-led title. Do not add “For Sale,” “For Rent,” phone numbers, or repeated punctuation.</span></label>
               <label><span className="field-label">Category</span><select name="category_id" defaultValue={initialProperty?.category_id ?? ''} required className={field}><option value="" disabled>Select a category</option>{allowedCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
               <label><span className="field-label">Sale or rent</span><select name="listing_type" defaultValue={initialProperty?.listing_type ?? 'For Sale'} className={field}><option>For Sale</option><option>For Rent</option></select></label>
               <label><span className="field-label">Price (PHP)</span><input name="price" type="number" min="0" step="0.01" defaultValue={initialProperty?.price} required className={field} /></label>
-              <label><span className="field-label">Price suffix (optional)</span><input name="price_suffix" defaultValue={initialProperty?.price_suffix ?? ''} className={field} placeholder="e.g. / month" /></label>
-              <label className="md:col-span-2"><span className="field-label">Description</span><textarea name="description" defaultValue={initialProperty?.description} required rows={7} className={`${field} resize-y`} placeholder="Describe the property, highlights, and nearby landmarks." /></label>
+              <label><span className="field-label">Price suffix (optional)</span><input name="price_suffix" defaultValue={initialProperty?.price_suffix ?? ''} className={field} placeholder="e.g. /month" /><span className="mt-2 block text-xs leading-5 text-[#68716b]">For rentals only. Sale listings remove this automatically.</span></label>
+              <label className="md:col-span-2"><span className="field-label">Description</span><textarea name="description" defaultValue={initialProperty?.description} required maxLength={5000} rows={7} className={`${field} resize-y`} placeholder="Describe the property, highlights, and nearby landmarks." /><span className="mt-2 block text-xs leading-5 text-[#68716b]">Published listings need at least 120 characters and two complete sentences before any feature list.</span></label>
             </div>
           </section>
 
           <section className="rounded-2xl border border-[#dde2de] bg-white p-5 sm:p-7">
             <h2 className="text-lg font-bold">Location</h2>
             <div className="mt-6 grid gap-4 md:grid-cols-3">
-              <label className="md:col-span-3"><span className="field-label">Listing location</span><input name="location" defaultValue={initialProperty?.location} required className={field} placeholder="Subdivision, barangay, or street" /><span className="mt-2 block text-xs leading-5 text-[#747c77]">This location is shown publicly in the listing heading.</span></label>
+              <label className="md:col-span-3"><span className="field-label">Listing location</span><input name="location" defaultValue={initialProperty?.location} required className={field} placeholder="Subdivision or barangay" /><span className="mt-2 block text-xs leading-5 text-[#68716b]">Enter the subdivision or area only. City and province are added automatically, so do not repeat them here.</span></label>
               <label><span className="field-label">City</span><input name="city" defaultValue={initialProperty?.city} required className={field} /></label>
               <label className="md:col-span-2"><span className="field-label">Province</span><input name="province" defaultValue={initialProperty?.province ?? 'Pampanga'} required className={field} /></label>
-              <label className="md:col-span-3"><span className="field-label">Public map location (optional)</span><input name="map_location" defaultValue={initialProperty?.map_location ?? ''} maxLength={2048} className={field} placeholder="Clark Freeport Zone, Pampanga or paste a Google Maps link" /><span className="mt-2 block text-xs leading-5 text-[#747c77]">Enter only the subdivision, barangay, city, or approximate area you want visitors to see. Leave blank to use the listing location above.</span></label>
-              <label className="md:col-span-3 flex items-start gap-3 rounded-xl border border-[#dde2de] p-4"><input name="show_map" type="checkbox" defaultChecked={initialProperty?.show_map ?? true} className="mt-0.5 h-4 w-4 accent-[#24634e]" /><span><span className="block text-sm font-semibold">Show map on public listing</span><span className="mt-1 block text-xs leading-5 text-[#747c77]">Turn this off when the location should not appear on a map.</span></span></label>
+              <label className="md:col-span-3"><span className="field-label">Public map location (optional)</span><input name="map_location" defaultValue={initialProperty?.map_location ?? ''} maxLength={2048} className={field} placeholder="Clark Freeport Zone, Pampanga or paste a Google Maps link" /><span className="mt-2 block text-xs leading-5 text-[#68716b]">Enter only the subdivision, barangay, city, or approximate area you want visitors to see. Leave blank to use the listing location above.</span></label>
+              <label className="md:col-span-3 flex items-start gap-3 rounded-xl border border-[#dde2de] p-4"><input name="show_map" type="checkbox" defaultChecked={initialProperty?.show_map ?? true} className="mt-0.5 h-4 w-4 accent-[#24634e]" /><span><span className="block text-sm font-semibold">Show map on public listing</span><span className="mt-1 block text-xs leading-5 text-[#68716b]">Turn this off when the location should not appear on a map.</span></span></label>
             </div>
           </section>
 
@@ -387,12 +456,12 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
               <label><span className="field-label">Lot area (sqm)</span><input name="lot_area" type="number" min="0" step="0.01" defaultValue={initialProperty?.lot_area ?? ''} className={field} /></label>
               <label><span className="field-label">Floor area (sqm)</span><input name="floor_area" type="number" min="0" step="0.01" defaultValue={initialProperty?.floor_area ?? ''} className={field} /></label>
             </div>
-            <label className="mt-5 block"><span className="field-label">Amenities and features</span><textarea name="amenities" defaultValue={amenities} rows={4} className={`${field} resize-y`} placeholder="Swimming pool, Guarded subdivision, Balcony (separate with commas or new lines)" /><span className="mt-2 block text-xs text-[#7a827d]">Separate each feature with a comma or new line.</span></label>
+            <label className="mt-5 block"><span className="field-label">Amenities and features</span><textarea name="amenities" defaultValue={amenities} rows={4} className={`${field} resize-y`} placeholder="Swimming pool, Guarded subdivision, Balcony (separate with commas or new lines)" /><span className="mt-2 block text-xs text-[#68716b]">Separate each feature with a comma or new line.</span></label>
           </section>
 
           <section className="rounded-2xl border border-[#dde2de] bg-white p-5 sm:p-7">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-lg font-bold">Property photos</h2><p className="mt-1 text-xs text-[#747c77]">Drag photos to reorder them. The first photo is the main listing image.</p></div><label className="relative flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#cfd6d1] bg-white px-4 py-2.5 text-xs font-bold text-[#24634e] hover:bg-[#f1f5f2]"><ImagePlus className="h-4 w-4" /> Add photos<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif" onChange={addImages} disabled={saving} className="absolute inset-0 cursor-pointer opacity-0" /></label></div>
-            {images.length === 0 ? <div className="mt-6 rounded-2xl border border-dashed border-[#cfd6d1] px-6 py-14 text-center"><ImagePlus className="mx-auto h-6 w-6 text-[#8a938d]" /><p className="mt-3 text-sm font-semibold">No photos selected</p><p className="mt-1 text-xs text-[#7a827d]">Add JPG, PNG, WebP, or AVIF files.</p></div> : (
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-lg font-bold">Property photos</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-[#68716b]">Drag photos to reorder them; the first is the main image. Published listings need {minimumPublishedPhotos} photos, featured listings need {minimumFeaturedPhotos}, and every photo must be at least {minimumPhotoLongEdge}×{minimumPhotoShortEdge}px. Use a landscape main photo.</p></div><label className="relative flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#cfd6d1] bg-white px-4 py-2.5 text-xs font-bold text-[#24634e] hover:bg-[#f1f5f2]"><ImagePlus className="h-4 w-4" /> Add photos<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif" onChange={addImages} disabled={saving} className="absolute inset-0 cursor-pointer opacity-0" /></label></div>
+            {images.length === 0 ? <div className="mt-6 rounded-2xl border border-dashed border-[#cfd6d1] px-6 py-14 text-center"><ImagePlus className="mx-auto h-6 w-6 text-[#68716b]" /><p className="mt-3 text-sm font-semibold">No photos selected</p><p className="mt-1 text-xs text-[#68716b]">Add JPG, PNG, WebP, or AVIF files.</p></div> : (
               <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {images.map((item, index) => (
                   <div
@@ -415,7 +484,7 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
                     }}
                     className={`overflow-hidden rounded-xl border bg-[#f5f6f4] transition ${draggedImageKey === item.key ? 'scale-[0.98] opacity-50' : ''} ${dragTargetKey === item.key && draggedImageKey !== item.key ? 'border-[#24634e] ring-4 ring-[#24634e]/10' : 'border-[#dde2de]'}`}
                   >
-                    <div className="relative aspect-[4/3] cursor-grab bg-[#e5e8e5] active:cursor-grabbing"><Image src={item.previewUrl} alt={`${initialProperty?.title ?? 'New property'} preview ${index + 1}`} fill unoptimized draggable={false} sizes="(max-width: 640px) 100vw, 320px" className="pointer-events-none object-cover" />{index === 0 && <span className="absolute left-2 top-2 rounded-lg bg-[#17362c]/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white">Main photo</span>}<span className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-lg bg-white/90 text-[#4c5650] shadow-sm" title="Drag to reorder"><GripVertical className="h-4 w-4" /></span></div>
+                    <div className="relative aspect-[4/3] cursor-grab bg-[#e5e8e5] active:cursor-grabbing"><Image src={item.previewUrl} alt={`${initialProperty?.title ?? 'New property'} preview ${index + 1}`} fill unoptimized draggable={false} sizes="(max-width: 640px) 100vw, 320px" className="pointer-events-none object-cover" onLoad={(event) => setImageDimensions((current) => ({ ...current, [item.key]: { width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight } }))} />{index === 0 && <span className="absolute left-2 top-2 rounded-lg bg-[#17362c]/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white">Main photo</span>}<span className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-lg bg-white/90 text-[#4c5650] shadow-sm" title="Drag to reorder"><GripVertical className="h-4 w-4" /></span></div>
                     <div className="flex flex-wrap items-center justify-between gap-2 p-2"><span className="pl-1 text-xs font-semibold text-[#68716b]">Photo {index + 1}</span><div className="flex gap-1">{index > 0 && <button type="button" onClick={() => makeMainImage(index)} disabled={saving} aria-label={`Make photo ${index + 1} the main photo`} title="Make main photo" className="flex h-8 items-center gap-1 rounded-lg border border-[#d8ddd9] bg-white px-2 text-[10px] font-bold text-[#24634e] disabled:opacity-35"><Star className="h-3.5 w-3.5" /> Main</button>}<button type="button" onClick={() => moveImage(index, -1)} disabled={saving || index === 0} aria-label="Move photo earlier" className="grid h-8 w-8 place-items-center rounded-lg border border-[#d8ddd9] bg-white disabled:opacity-35"><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" onClick={() => moveImage(index, 1)} disabled={saving || index === images.length - 1} aria-label="Move photo later" className="grid h-8 w-8 place-items-center rounded-lg border border-[#d8ddd9] bg-white disabled:opacity-35"><ArrowDown className="h-3.5 w-3.5" /></button><button type="button" onClick={() => removeImage(index)} disabled={saving} aria-label="Delete photo" className="grid h-8 w-8 place-items-center rounded-lg border border-[#e4cbc8] bg-white text-[#98453e] disabled:opacity-35"><Trash2 className="h-3.5 w-3.5" /></button></div></div>
                   </div>
                 ))}
@@ -429,9 +498,18 @@ export function PropertyForm({ categories, initialProperty }: { categories: Admi
             <h2 className="text-lg font-bold">Publishing</h2>
             <div className="mt-5 space-y-4">
               <label><span className="field-label">Availability</span><select name="status" defaultValue={initialProperty?.status ?? 'Available'} className={field}>{propertyStatuses.map((status) => <option key={status}>{status}</option>)}</select></label>
-              <label><span className="field-label">Visibility</span><select name="publication_status" defaultValue={initialProperty?.publication_status ?? 'draft'} className={field}>{propertyPublicationStatuses.map((status) => <option key={status} value={status}>{status[0].toUpperCase() + status.slice(1)}</option>)}</select><span className="mt-2 block text-xs leading-5 text-[#747c77]">Draft and archived listings are hidden from the public website.</span></label>
-              <label className="flex items-start gap-3 rounded-xl border border-[#dde2de] p-4"><input name="featured" type="checkbox" defaultChecked={initialProperty?.featured} className="mt-0.5 h-4 w-4 accent-[#24634e]" /><span><span className="block text-sm font-semibold">Featured listing</span><span className="mt-1 block text-xs leading-5 text-[#747c77]">Show this property in featured areas on the public site.</span></span></label>
+              <label><span className="field-label">Visibility</span><select name="publication_status" defaultValue={initialProperty?.publication_status ?? 'draft'} className={field}>{propertyPublicationStatuses.map((status) => <option key={status} value={status}>{status[0].toUpperCase() + status.slice(1)}</option>)}</select><span className="mt-2 block text-xs leading-5 text-[#68716b]">Draft and archived listings are hidden from the public website.</span></label>
+              <label className="flex items-start gap-3 rounded-xl border border-[#dde2de] p-4"><input name="featured" type="checkbox" defaultChecked={initialProperty?.featured} className="mt-0.5 h-4 w-4 accent-[#24634e]" /><span><span className="block text-sm font-semibold">Featured listing</span><span className="mt-1 block text-xs leading-5 text-[#68716b]">Show this property in featured areas on the public site.</span></span></label>
             </div>
+          </section>
+
+          <section className="rounded-2xl border border-[#cfe0d7] bg-[#f4f8f5] p-5 text-sm text-[#355548]">
+            <div className="flex items-center gap-2 font-bold text-[#234f3e]"><CheckCircle2 className="h-4 w-4" /> Publishing standard</div>
+            <ul className="mt-3 space-y-2 text-xs leading-5">
+              <li>Clear, location-led title and complete description</li>
+              <li>Subdivision or area, city, and province</li>
+              <li>{minimumPublishedPhotos}+ sharp photos with a landscape main image</li>
+            </ul>
           </section>
 
           <div className="rounded-2xl bg-[#e5eee9] p-5 text-sm leading-6 text-[#3f5b4f]">Only published listings appear on the public website. Save as draft while details or photos are still being prepared.</div>

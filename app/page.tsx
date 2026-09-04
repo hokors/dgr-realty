@@ -27,13 +27,13 @@ export const metadata: Metadata = {
 };
 
 const categoryDetails = [
-  { name: 'House', label: 'Houses', image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=85' },
-  { name: 'Condominium', label: 'Condominiums', image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=85' },
-  { name: 'Lot', label: 'Residential Lots', image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=85' },
-  { name: 'Raw Land', label: 'Raw Land', image: 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1200&q=85' },
-  { name: 'Rentals', label: 'Rentals', image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85' },
-  { name: 'Commercial', label: 'Commercial', image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=85' },
-  { name: 'Farm Lot', label: 'Farm Lots', image: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?auto=format&fit=crop&w=1200&q=85' },
+  { name: 'House', label: 'Houses' },
+  { name: 'Condominium', label: 'Condominiums' },
+  { name: 'Lot', label: 'Residential Lots' },
+  { name: 'Raw Land', label: 'Raw Land' },
+  { name: 'Rentals', label: 'Rentals' },
+  { name: 'Commercial', label: 'Commercial' },
+  { name: 'Farm Lot', label: 'Farm Lots' },
 ];
 
 export default async function Home() {
@@ -44,15 +44,24 @@ export default async function Home() {
   const recent = [...properties]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 4);
+  const heroProperty = featured.find((property) => property.images[0]) ?? properties.find((property) => property.images[0]);
+  const heroImage = heroProperty?.images[0]?.imageUrl
+    ?? 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2200&q=90';
+  const activeCategories = categoryDetails.flatMap(({ name, label }) => {
+    const categoryProperties = properties.filter((property) => property.category === name && property.images[0]);
+    const availableCount = categoryProperties.filter((property) => property.status === 'Available').length;
+    const property = categoryProperties.find((item) => item.status === 'Available') ?? categoryProperties[0];
+    return property ? [{ name, label, availableCount, image: property.images[0].imageUrl }] : [];
+  });
 
   return (
     <main className="min-h-screen bg-[#f8f9f7] text-[#202522]">
       <Header />
 
-      <section className="relative isolate min-h-[650px] overflow-hidden bg-[#dce2dd] text-white lg:min-h-[700px]">
+      <section className="relative isolate min-h-[560px] overflow-hidden bg-[#dce2dd] text-white sm:min-h-[620px] lg:min-h-[700px]">
         <Image
-          src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2200&q=90"
-          alt="Contemporary home surrounded by landscaped greenery"
+          src={heroImage}
+          alt={heroProperty ? `${heroProperty.title} in ${heroProperty.city}` : 'Contemporary home surrounded by landscaped greenery'}
           fill
           priority
           unoptimized
@@ -60,23 +69,23 @@ export default async function Home() {
           className="hero-media object-cover"
         />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,26,23,.72)_0%,rgba(20,26,23,.34)_55%,rgba(20,26,23,.12)_100%)]" />
-        <div className="relative mx-auto flex min-h-[650px] max-w-[1440px] items-center px-5 py-16 sm:px-8 lg:min-h-[700px] lg:px-12">
+        <div className="relative mx-auto flex min-h-[560px] max-w-[1440px] items-center px-5 py-10 sm:min-h-[620px] sm:px-8 sm:py-14 lg:min-h-[700px] lg:px-12">
           <div className="hero-intro w-full max-w-4xl">
             <p className="mb-4 text-xs font-bold uppercase tracking-[0.18em] text-white/75">Property across Pampanga</p>
-            <h1 className="display max-w-3xl text-5xl leading-[0.98] tracking-[-0.055em] sm:text-7xl lg:text-[82px]">Find your next property.</h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-white/85 sm:text-lg">Search homes, land, commercial spaces, rentals, and investment opportunities in one trusted place.</p>
+            <h1 className="display max-w-3xl text-4xl leading-[0.98] tracking-[-0.045em] sm:text-7xl sm:tracking-[-0.055em] lg:text-[82px]">Find your next property.</h1>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-white/88 sm:mt-5 sm:text-lg sm:leading-7">Search homes, land, commercial spaces, rentals, and investment opportunities in one trusted place.</p>
 
-            <form action="/properties" className="mt-9 grid max-w-4xl gap-2 rounded-2xl bg-white p-2 shadow-[0_18px_55px_rgba(16,24,20,0.24)] sm:grid-cols-[0.8fr_1fr_1.2fr_auto]">
+            <form action="/properties" className="mt-6 grid max-w-4xl gap-2 rounded-xl bg-white p-2 shadow-[0_14px_40px_rgba(16,24,20,0.22)] sm:mt-9 sm:grid-cols-[0.8fr_1fr_1.2fr_auto] sm:rounded-2xl">
               <label className="rounded-xl px-4 py-3 text-[#202522] hover:bg-[#f5f7f4]">
-                <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[#747c77]">I want to</span>
+                <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[#68716b]">I want to</span>
                 <select name="listingType" className="mt-1 w-full bg-transparent text-sm font-semibold outline-none"><option value="For Sale">Buy</option><option value="For Rent">Rent</option></select>
               </label>
               <label className="rounded-xl border-t border-[#edf0ec] px-4 py-3 text-[#202522] hover:bg-[#f5f7f4] sm:border-l sm:border-t-0">
-                <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[#747c77]">Property type</span>
+                <span className="block text-[10px] font-bold uppercase tracking-[0.1em] text-[#68716b]">Property type</span>
                 <select name="category" className="mt-1 w-full bg-transparent text-sm font-semibold outline-none"><option value="All">All properties</option>{propertyCategories.map((category) => <option key={category}>{category}</option>)}</select>
               </label>
               <label className="rounded-xl border-t border-[#edf0ec] px-4 py-3 text-[#202522] hover:bg-[#f5f7f4] sm:border-l sm:border-t-0">
-                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#747c77]"><MapPin className="h-3 w-3" /> Location</span>
+                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#68716b]"><MapPin className="h-3 w-3" /> Location</span>
                 <input name="location" className="mt-1 w-full bg-transparent text-sm font-semibold outline-none placeholder:font-normal placeholder:text-[#8a918d]" placeholder="City or area" />
               </label>
               <button className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#24634e] px-7 py-4 text-sm font-bold text-white transition hover:bg-[#1b4f3e]"><Search className="h-4 w-4" /> Search</button>
@@ -91,13 +100,10 @@ export default async function Home() {
           <Link href="/properties" className="flex items-center gap-2 text-sm font-semibold text-[#24634e] hover:text-[#173f32]">View all properties <ArrowRight className="h-4 w-4" /></Link>
         </div>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {categoryDetails.map(({ name, label, image }, index) => {
-            const categoryProperties = properties.filter((property) => property.category === name);
-            const availableCount = categoryProperties.filter((property) => property.status === 'Available').length;
-            const displayImage = categoryProperties[0]?.images[0]?.imageUrl ?? image;
+          {activeCategories.map(({ name, label, image, availableCount }, index) => {
             return (
-              <Link data-reveal key={name} href={`/properties?category=${encodeURIComponent(name)}`} className={`group relative isolate min-h-64 overflow-hidden rounded-2xl bg-[#dfe3df] ${index === 0 ? 'md:col-span-2 md:row-span-2 md:min-h-[544px]' : ''}`}>
-                <Image src={displayImage} alt={`${label} available through DGR Realty`} fill unoptimized sizes={index === 0 ? '(max-width: 768px) 50vw, 50vw' : '(max-width: 768px) 50vw, 25vw'} className="object-cover transition duration-500 group-hover:scale-[1.035]" />
+              <Link data-reveal key={name} href={`/properties?category=${encodeURIComponent(name)}`} className={`group relative isolate min-h-56 overflow-hidden rounded-xl bg-[#dfe3df] sm:min-h-64 ${index === 0 && activeCategories.length > 2 ? 'md:col-span-2 md:row-span-2 md:min-h-[544px]' : ''}`}>
+                <Image src={image} alt={`${label} available through DGR Realty`} fill unoptimized sizes={index === 0 ? '(max-width: 768px) 50vw, 50vw' : '(max-width: 768px) 50vw, 25vw'} className="object-cover transition duration-500 group-hover:scale-[1.035]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-6">
                   <h3 className="text-lg font-bold tracking-[-0.02em]">{label}</h3>
@@ -106,7 +112,7 @@ export default async function Home() {
               </Link>
             );
           })}
-          <Link data-reveal href="/properties" className="group flex min-h-64 flex-col justify-between rounded-2xl bg-[#dce9e3] p-6 text-[#173f32] transition hover:bg-[#cee1d8]">
+          <Link data-reveal href="/properties" className="group flex min-h-56 flex-col justify-between rounded-xl bg-[#dce9e3] p-6 text-[#173f32] transition hover:bg-[#cee1d8] sm:min-h-64">
             <ArrowRight className="h-6 w-6 self-end transition group-hover:translate-x-1" />
             <div><p className="text-xs font-bold uppercase tracking-[0.12em]">All categories</p><h3 className="mt-2 text-xl font-bold">Explore every opportunity</h3></div>
           </Link>
@@ -130,7 +136,7 @@ export default async function Home() {
 
       <section id="about" className="bg-[#eef3ef] py-20 lg:py-24">
         <div className="mx-auto grid max-w-[1440px] gap-12 px-5 sm:px-8 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:px-12">
-          <div data-reveal="left" className="relative min-h-[430px] overflow-hidden rounded-3xl bg-[#dfe3df]"><Image src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1400&q=85" alt="Real estate professional presenting a property" fill unoptimized sizes="(max-width: 1024px) 100vw, 48vw" className="object-cover" /></div>
+          <div data-reveal="left" className="relative min-h-[400px] overflow-hidden rounded-xl bg-[#dfe3df] sm:min-h-[430px]"><Image src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1400&q=85" alt="Real estate professional presenting a property" fill unoptimized sizes="(max-width: 1024px) 100vw, 48vw" className="object-cover" /></div>
           <div data-reveal="right" className="lg:pl-8">
             <p className="eyebrow">A simpler property search</p>
             <h2 className="display mt-3 max-w-2xl text-4xl leading-[1.08] tracking-[-0.045em] sm:text-5xl">Clear information. Local context. A direct next step.</h2>
@@ -143,7 +149,7 @@ export default async function Home() {
       </section>
 
       <section id="contact" className="mx-auto max-w-[1440px] px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
-        <div data-reveal className="grid overflow-hidden rounded-3xl border border-[#e1e5e1] bg-white shadow-[0_18px_55px_rgba(29,39,33,0.07)] lg:grid-cols-[0.9fr_1.1fr]">
+        <div data-reveal className="grid overflow-hidden rounded-2xl border border-[#e1e5e1] bg-white shadow-[0_12px_38px_rgba(29,39,33,0.06)] lg:grid-cols-[0.9fr_1.1fr]">
           <div className="bg-[#24634e] p-7 text-white sm:p-10 lg:p-12">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/65">Contact DGR Realty</p>
             <h2 className="display mt-4 text-4xl leading-tight tracking-[-0.04em]">Let’s find the right next move.</h2>
