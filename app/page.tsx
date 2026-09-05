@@ -36,6 +36,18 @@ const categoryDetails = [
   { name: 'Farm Lot', label: 'Farm Lots' },
 ];
 
+function optimizedHeroSource(imageUrl: string) {
+  try {
+    const parsed = new URL(imageUrl);
+    if (parsed.pathname.startsWith('/api/property-images/')) {
+      return `${parsed.pathname}${parsed.search}`;
+    }
+  } catch {
+    // Relative and external fallback images can be passed directly to next/image.
+  }
+  return imageUrl;
+}
+
 export default async function Home() {
   const properties = await getProperties();
   const contact = getPublicContactDetails();
@@ -45,8 +57,8 @@ export default async function Home() {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 4);
   const heroProperty = featured.find((property) => property.images[0]) ?? properties.find((property) => property.images[0]);
-  const heroImage = heroProperty?.images[0]?.imageUrl
-    ?? 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2200&q=90';
+  const heroImage = optimizedHeroSource(heroProperty?.images[0]?.imageUrl
+    ?? 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=3200&q=95');
   const activeCategories = categoryDetails.flatMap(({ name, label }) => {
     const categoryProperties = properties.filter((property) => property.category === name && property.images[0]);
     const availableCount = categoryProperties.filter((property) => property.status === 'Available').length;
@@ -63,8 +75,8 @@ export default async function Home() {
           src={heroImage}
           alt={heroProperty ? `${heroProperty.title} in ${heroProperty.city}` : 'Contemporary home surrounded by landscaped greenery'}
           fill
-          priority
-          unoptimized
+          preload
+          quality={90}
           sizes="100vw"
           className="hero-media object-cover"
         />

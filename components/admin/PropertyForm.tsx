@@ -24,8 +24,8 @@ type SaveProgress = { label: string; current?: number; total?: number };
 const IMAGE_OPTIMIZATION_CONCURRENCY = 2;
 const IMAGE_UPLOAD_CONCURRENCY = 5;
 const IMAGE_UPLOAD_ATTEMPTS = 3;
-const MAX_IMAGE_DIMENSION = 2200;
-const WEBP_QUALITY = 0.84;
+const MAX_IMAGE_DIMENSION = 3000;
+const WEBP_QUALITY = 0.9;
 
 function delay(milliseconds: number) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
