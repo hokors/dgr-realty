@@ -2,7 +2,7 @@ import 'server-only';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export async function getAdminUser() {
+export async function getAdminUser(options: { requireMfa?: boolean } = {}) {
   const supabase = await createServerSupabaseClient();
   if (!supabase) return null;
 
@@ -17,6 +17,11 @@ export async function getAdminUser() {
     .maybeSingle();
 
   if (profile?.role !== 'admin') return null;
+
+  if (options.requireMfa !== false) {
+    const { data: assurance, error: assuranceError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (assuranceError || assurance.currentLevel !== 'aal2') return null;
+  }
 
   return {
     id: user.id,

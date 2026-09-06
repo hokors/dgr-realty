@@ -113,8 +113,55 @@ export async function POST(request: Request) {
     });
   }
 
-  return NextResponse.json({ success: true }, {
+  const { data: assurance, error: assuranceError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (assuranceError) {
+    await supabase.auth.signOut({ scope: 'local' });
+    return NextResponse.json({ error: 'Two-factor authentication is temporarily unavailable.' }, { status: 503 });
+  }
+  if (assurance.currentLevel === 'aal2') {
+    return NextResponse.json({ success: true }, {
+      headers: { 'Cache-Control': 'no-store', 'X-Request-ID': requestId },
+    });
+  }
+
+  const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+  if (factorsError) {
+    await supabase.auth.signOut({ scope: 'local' });
+    return NextResponse.json({ error: 'Two-factor authentication is temporarily unavailable.' }, { status: 503 });
+  }
+  // Only challenge a factor that Supabase has fully verified. An abandoned
+  // enrollment may still appear in the factor list, but must never be treated
+  // as a valid second factor on a later sign-in.
+  const verifiedFactor = factors.all.find(
+    (factor) => factor.factor_type === 'totp' && factor.status === 'verified',
+  );
+  if (verifiedFactor) {
+    return NextResponse.json({ mfaRequired: true, factorId: verifiedFactor.id }, {
+      headers: { 'Cache-Control': 'no-store', 'X-Request-ID': requestId },
+    });
+  }
+
+  // Replace abandoned, unverified enrollments so the owner always receives a
+  // QR code for the factor that will actually be verified.
+  for (const factor of factors.all.filter((item) => item.factor_type === 'totp' && item.status === 'unverified')) {
+    await supabase.auth.mfa.unenroll({ factorId: factor.id });
+  }
+  const { data: enrollment, error: enrollmentError } = await supabase.auth.mfa.enroll({
+    factorType: 'totp',
+    friendlyName: 'DGR Realty Admin',
+    issuer: 'DGR Realty',
+  });
+  if (enrollmentError) {
+    await supabase.auth.signOut({ scope: 'local' });
+    return NextResponse.json({ error: 'Unable to set up two-factor authentication.' }, { status: 503 });
+  }
+
+  return NextResponse.json({
+    mfaEnrollmentRequired: true,
+    factorId: enrollment.id,
+    qrCode: enrollment.totp.qr_code,
+    secret: enrollment.totp.secret,
+  }, {
     headers: { 'Cache-Control': 'no-store', 'X-Request-ID': requestId },
   });
 }
-

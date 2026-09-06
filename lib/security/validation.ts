@@ -92,6 +92,11 @@ export const adminLoginSchema = z.object({
   password: z.string().min(1).max(1_024),
 }).strict();
 
+export const adminMfaVerifySchema = z.object({
+  factorId: uuid,
+  code: z.string().trim().regex(/^\d{6}$/),
+}).strict();
+
 export const inquiryStatusSchema = z.object({
   status: z.enum(['new', 'contacted', 'closed']),
 }).strict();

@@ -36,8 +36,8 @@ export function hasValidMutationOrigin(request: Request) {
   return hasTrustedMutationOrigin(request);
 }
 
-export async function getAdminMutationContext() {
-  const admin = await getAdminUser();
+export async function getAdminMutationContext(requireMfa = true) {
+  const admin = await getAdminUser({ requireMfa });
   const supabase = createAdminSupabaseClient();
   if (!admin || !supabase) return null;
   return { admin, supabase };
@@ -48,6 +48,7 @@ export async function authorizeAdminMutation(
   action: string,
   limit: number,
   windowSeconds: number,
+  requireMfa = true,
 ) {
   const requestId = createRequestId();
   const route = new URL(request.url).pathname;
@@ -62,7 +63,7 @@ export async function authorizeAdminMutation(
     };
   }
 
-  const context = await getAdminMutationContext();
+  const context = await getAdminMutationContext(requireMfa);
   if (!context) {
     securityLog('admin_auth_rejected', { requestId, route, reason: action });
     return {

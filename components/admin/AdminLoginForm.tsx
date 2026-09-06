@@ -8,6 +8,12 @@ export function AdminLoginForm() {
   const router = useRouter();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mfa, setMfa] = useState<null | {
+    factorId: string;
+    enrollment: boolean;
+    qrCode?: string;
+    secret?: string;
+  }>(null);
 
   async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -24,14 +30,110 @@ export function AdminLoginForm() {
           password: String(form.get('password') ?? ''),
         }),
       });
-      const result = await response.json() as { success?: boolean; error?: string };
-      if (!response.ok || !result.success) throw new Error(result.error ?? 'Unable to sign in.');
+      const result = await response.json() as {
+        success?: boolean;
+        error?: string;
+        mfaRequired?: boolean;
+        mfaEnrollmentRequired?: boolean;
+        factorId?: string;
+        qrCode?: string;
+        secret?: string;
+      };
+      if (!response.ok) throw new Error(result.error ?? 'Unable to sign in.');
+      if ((result.mfaRequired || result.mfaEnrollmentRequired) && result.factorId) {
+        setMfa({
+          factorId: result.factorId,
+          enrollment: Boolean(result.mfaEnrollmentRequired),
+          qrCode: result.qrCode,
+          secret: result.secret,
+        });
+        setLoading(false);
+        return;
+      }
+      if (!result.success) throw new Error('Unable to sign in.');
       router.replace('/admin');
       router.refresh();
     } catch (signInError) {
       setError(signInError instanceof Error ? signInError.message : 'Unable to sign in.');
       setLoading(false);
     }
+  }
+
+  async function verifyMfa(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!mfa) return;
+    setError('');
+    setLoading(true);
+    const form = new FormData(event.currentTarget);
+    try {
+      const response = await fetch('/api/admin/mfa/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ factorId: mfa.factorId, code: String(form.get('code') ?? '') }),
+      });
+      const result = await response.json() as { success?: boolean; error?: string };
+      if (!response.ok || !result.success) throw new Error(result.error ?? 'Unable to verify the code.');
+      router.replace('/admin');
+      router.refresh();
+    } catch (verifyError) {
+      setError(verifyError instanceof Error ? verifyError.message : 'Unable to verify the code.');
+      setLoading(false);
+    }
+  }
+
+  async function restart() {
+    await fetch('/api/admin/logout', { method: 'POST' });
+    setMfa(null);
+    setError('');
+    setLoading(false);
+  }
+
+  if (mfa) {
+    const qrSource = mfa.qrCode?.startsWith('data:')
+      ? mfa.qrCode
+      : mfa.qrCode
+        ? `data:image/svg+xml;utf-8,${encodeURIComponent(mfa.qrCode)}`
+        : null;
+    return (
+      <form onSubmit={verifyMfa} className="w-full max-w-md rounded-3xl border border-[#dde2de] bg-white p-7 shadow-[0_24px_70px_rgba(23,54,44,0.12)] sm:p-9">
+        <div className="grid h-11 w-11 place-items-center rounded-xl bg-[#e5efe9] text-[#24634e]"><LockKeyhole className="h-5 w-5" /></div>
+        <p className="mt-7 text-xs font-bold uppercase tracking-[0.15em] text-[#24634e]">Two-factor authentication</p>
+        <h1 className="display mt-3 text-4xl tracking-[-0.045em]">{mfa.enrollment ? 'Secure your account' : 'Enter your security code'}</h1>
+        <p className="mt-3 text-sm leading-6 text-[#69716c]">
+          {mfa.enrollment
+            ? 'Scan this QR code with Google Authenticator, Microsoft Authenticator, Authy, or another TOTP app.'
+            : 'Enter the current six-digit code from your authenticator app.'}
+        </p>
+
+        {mfa.enrollment && qrSource && (
+          <div className="mt-6 grid place-items-center rounded-2xl border border-[#dde2de] bg-white p-4">
+            {/* This is a short-lived SVG data URL returned by Supabase, not an
+                image asset that should pass through Next's optimizer. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={qrSource}
+              alt="Authenticator setup QR code"
+              width={220}
+              height={220}
+              className="h-[220px] w-[220px]"
+            />
+          </div>
+        )}
+        {mfa.enrollment && mfa.secret && (
+          <div className="mt-4 rounded-xl bg-[#f2f5f3] p-4 text-xs text-[#526059]">
+            <span className="block font-semibold">Can’t scan it? Enter this setup key:</span>
+            <code className="mt-2 block break-all font-mono text-sm text-[#202522]">{mfa.secret}</code>
+          </div>
+        )}
+
+        <label className="mt-6 block"><span className="field-label">Six-digit code</span><input name="code" type="text" required autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} className="form-field text-center font-mono text-xl tracking-[0.35em]" /></label>
+        {error && <p className="mt-4 rounded-xl bg-[#f9e9e7] px-4 py-3 text-sm text-[#913d36]" role="alert">{error}</p>}
+        <button disabled={loading} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#24634e] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#1b4f3e] disabled:opacity-60">
+          {loading && <LoaderCircle className="h-4 w-4 animate-spin" />} Verify and continue
+        </button>
+        <button type="button" onClick={restart} disabled={loading} className="mt-3 w-full text-center text-xs font-semibold text-[#68716b] hover:text-[#202522]">Use a different account</button>
+      </form>
+    );
   }
 
   return (

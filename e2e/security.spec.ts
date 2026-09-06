@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { hasValidImageSignature } from '../lib/security/image-signatures';
 import { normalizeRateLimitResult } from '../lib/security/rate-limit-result';
-import { imageStageSchema, inquirySchema, propertyQuickUpdateSchema } from '../lib/security/validation';
+import { adminMfaVerifySchema, imageStageSchema, inquirySchema, propertyQuickUpdateSchema } from '../lib/security/validation';
 
 test.describe('security controls', () => {
   test('responses include the production security header baseline', async ({ request }) => {
@@ -74,6 +74,15 @@ test.describe('security controls', () => {
       website: '',
       startedAt: Date.now() - 2_000,
       role: 'admin',
+    }).success).toBe(false);
+    expect(adminMfaVerifySchema.safeParse({
+      factorId: '00000000-0000-4000-8000-000000000001',
+      code: '123456',
+      role: 'admin',
+    }).success).toBe(false);
+    expect(adminMfaVerifySchema.safeParse({
+      factorId: '00000000-0000-4000-8000-000000000001',
+      code: '12345a',
     }).success).toBe(false);
   });
 
