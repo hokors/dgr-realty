@@ -11,6 +11,8 @@ test.describe('public website', () => {
     await expect(page.getByRole('button', { name: /search/i })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Send inquiry' })).toBeVisible();
     await expect(page.getByRole('checkbox')).toBeVisible();
+    await expect(page.getByRole('link', { name: /admin access/i })).toHaveCount(0);
+    await expect(page.locator('a[href^="/admin"]')).toHaveCount(0);
   });
 
   test('property search and filters respond to user input', async ({ page }) => {

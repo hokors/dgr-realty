@@ -17,7 +17,7 @@ export function Footer() {
         </div>
         <div>
           <p className="mb-5 text-xs font-bold uppercase tracking-[0.12em] text-white/65">Explore</p>
-          <div className="grid gap-3 text-sm text-white/76"><Link href="/">Home</Link><Link href="/properties">All properties</Link><Link href="/properties?listingType=For+Sale">For sale</Link><Link href="/properties?listingType=For+Rent">For rent</Link><Link href="/#contact">Contact</Link><Link href="/admin">Admin access</Link></div>
+          <div className="grid gap-3 text-sm text-white/76"><Link href="/">Home</Link><Link href="/properties">All properties</Link><Link href="/properties?listingType=For+Sale">For sale</Link><Link href="/properties?listingType=For+Rent">For rent</Link><Link href="/#contact">Contact</Link></div>
         </div>
         <div>
           <p className="mb-5 text-xs font-bold uppercase tracking-[0.12em] text-white/65">Property types</p>
