@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
+  Award,
   ArrowRight,
   CheckCircle2,
   Mail,
@@ -10,6 +11,7 @@ import {
   Phone,
   Search,
 } from 'lucide-react';
+import agentPhoto from '@/1wep1bv5mdrg80d0m38t9xccvm_result_0.jpg';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { InquiryForm } from '@/components/InquiryForm';
@@ -132,16 +134,37 @@ export default async function Home() {
         {recent.length > 0 ? <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">{recent.map((property) => <PropertyCard key={property.id} property={property} />)}</div> : <div className="rounded-2xl border border-dashed border-[#d8ddd9] px-6 py-16 text-center text-sm text-[#6d756f]">New listings will appear here as they are published.</div>}
       </section>
 
-      <section id="about" className="bg-[#eef3ef] py-20 lg:py-24">
-        <div className="mx-auto grid max-w-[1440px] gap-12 px-5 sm:px-8 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:px-12">
-          <div data-reveal="left" className="relative min-h-[400px] overflow-hidden rounded-xl bg-[#dfe3df] sm:min-h-[430px]"><Image src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1400&q=85" alt="Real estate professional presenting a property" fill unoptimized sizes="(max-width: 1024px) 100vw, 48vw" className="object-cover" /></div>
-          <div data-reveal="right" className="lg:pl-8">
-            <p className="eyebrow">A simpler property search</p>
-            <h2 className="display mt-3 max-w-2xl text-4xl leading-[1.08] tracking-[-0.045em] sm:text-5xl">Clear information. Local context. A direct next step.</h2>
-            <p className="mt-6 max-w-xl text-base leading-8 text-[#606862]">DGR Realty organizes homes, land, rentals, and commercial opportunities into one easy-to-browse marketplace—helping you compare confidently and connect when you are ready.</p>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              {['Property details that matter', 'Responsive support', 'Listings across key categories', 'Mobile-friendly browsing'].map((item) => <p key={item} className="flex items-center gap-3 text-sm font-medium"><CheckCircle2 className="h-5 w-5 text-[#24634e]" /> {item}</p>)}
+      <section id="about" className="overflow-hidden bg-[#eef3ef] py-20 lg:py-28">
+        <div className="mx-auto grid max-w-[1440px] gap-12 px-5 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-20 lg:px-12">
+          <div data-reveal="left" className="relative mx-auto w-full max-w-[560px]">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-[#dbe2dc] shadow-[0_24px_70px_rgba(25,52,42,0.16)]">
+              <Image src={agentPhoto} alt="Glenndz Rivera, DGR Realty property consultant" fill sizes="(max-width: 1024px) 100vw, 42vw" className="object-cover object-[62%_64%]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#15241d]/25 via-transparent to-transparent" />
             </div>
+            <div className="absolute -bottom-5 left-4 flex items-center gap-3 rounded-2xl border border-white/70 bg-white/95 px-5 py-4 shadow-[0_16px_40px_rgba(26,45,37,0.16)] backdrop-blur sm:left-8 sm:px-6">
+              <span className="grid h-11 w-11 place-items-center rounded-full bg-[#e1eee7] text-[#24634e]"><Award className="h-5 w-5" /></span>
+              <span><strong className="display block text-2xl leading-none text-[#202522]">19 years</strong><span className="mt-1 block text-xs font-semibold uppercase tracking-[0.1em] text-[#69716c]">in real estate</span></span>
+            </div>
+          </div>
+          <div data-reveal="right" className="pt-5 lg:pt-0">
+            <p className="eyebrow">Meet your agent</p>
+            <h2 className="display mt-3 text-4xl leading-[1.04] tracking-[-0.045em] sm:text-6xl">Glenndz Rivera</h2>
+            <p className="mt-3 text-sm font-bold uppercase tracking-[0.13em] text-[#24634e]">DGR Realty Property Consultant</p>
+            <p className="mt-7 max-w-2xl text-base leading-8 text-[#59625c]">With 19 years of real-estate experience, Glenndz brings seasoned local insight and steady, personal guidance to every property decision—whether you are buying, selling, renting, or investing.</p>
+            <blockquote className="mt-7 max-w-2xl border-l-2 border-[#8eaf9f] pl-5 text-lg leading-8 text-[#33443c]">“My role is to make each step clear, practical, and easier to move forward with confidence.”</blockquote>
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              {['Experienced, personal guidance', 'Support from search to closing', 'Local property-market knowledge', 'Clear and responsive communication'].map((item) => <p key={item} className="flex items-center gap-3 text-sm font-medium"><CheckCircle2 className="h-5 w-5 shrink-0 text-[#24634e]" /> {item}</p>)}
+            </div>
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Link href="/#contact" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#24634e] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#1b4f3e]">Contact Glenndz <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/properties" className="inline-flex items-center justify-center rounded-xl border border-[#cfd8d2] bg-white px-6 py-3.5 text-sm font-bold text-[#26352e] transition hover:border-[#9fb5a9] hover:bg-[#f9fbf9]">View properties</Link>
+            </div>
+            {(contact.phone || contact.email) && (
+              <div className="mt-6 flex flex-col gap-3 text-sm text-[#526059] sm:flex-row sm:gap-6">
+                {contact.phone && contact.phoneHref && <a href={contact.phoneHref} className="flex items-center gap-2 transition hover:text-[#24634e]"><Phone className="h-4 w-4" /> {contact.phone}</a>}
+                {contact.email && contact.emailHref && <a href={contact.emailHref} className="flex items-center gap-2 transition hover:text-[#24634e]"><Mail className="h-4 w-4" /> {contact.email}</a>}
+              </div>
+            )}
           </div>
         </div>
       </section>
