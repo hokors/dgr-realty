@@ -4,10 +4,12 @@ import Link from 'next/link';
 import {
   Award,
   ArrowRight,
-  CheckCircle2,
+  Handshake,
   Mail,
   MapPin,
+  MapPinned,
   MessageCircle,
+  MessagesSquare,
   Phone,
   Search,
 } from 'lucide-react';
@@ -36,6 +38,13 @@ const categoryDetails = [
   { name: 'Rentals', label: 'Rentals' },
   { name: 'Commercial', label: 'Commercial' },
   { name: 'Farm Lot', label: 'Farm Lots' },
+];
+
+const agentValueProps = [
+  { label: '19 Years of Experience', Icon: Award },
+  { label: 'Local Market Expertise', Icon: MapPinned },
+  { label: 'Search-to-Closing Support', Icon: Handshake },
+  { label: 'Clear Communication', Icon: MessagesSquare },
 ];
 
 export default async function Home() {
@@ -134,37 +143,39 @@ export default async function Home() {
         {recent.length > 0 ? <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">{recent.map((property) => <PropertyCard key={property.id} property={property} />)}</div> : <div className="rounded-2xl border border-dashed border-[#d8ddd9] px-6 py-16 text-center text-sm text-[#6d756f]">New listings will appear here as they are published.</div>}
       </section>
 
-      <section id="about" className="overflow-hidden bg-[#eef3ef] py-20 lg:py-28">
-        <div className="mx-auto grid max-w-[1440px] gap-12 px-5 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-20 lg:px-12">
-          <div data-reveal="left" className="relative mx-auto w-full max-w-[560px]">
-            <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-[#dbe2dc] shadow-[0_24px_70px_rgba(25,52,42,0.16)]">
-              <Image src={agentPhoto} alt="Glenndz Rivera, DGR Realty property consultant" fill sizes="(max-width: 1024px) 100vw, 42vw" className="object-cover object-[62%_64%]" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#15241d]/25 via-transparent to-transparent" />
+      <section id="about" className="overflow-hidden bg-[#f7f3eb] py-20 lg:py-28">
+        <div className="mx-auto grid max-w-[1440px] gap-14 px-5 sm:px-8 lg:grid-cols-2 lg:items-center lg:gap-20 lg:px-12">
+          <div data-reveal="left" className="relative mx-auto w-full max-w-[600px]">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-[#d8ccbc] bg-[#e8dfd2] shadow-[0_26px_70px_rgba(66,49,35,0.16)]">
+              <Image src={agentPhoto} alt="Glenndz Rivera, DGR Realty property broker" fill sizes="(max-width: 1024px) 100vw, 42vw" className="object-cover object-[62%_64%]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#17271f]/20 via-transparent to-transparent" />
             </div>
-            <div className="absolute -bottom-5 left-4 flex items-center gap-3 rounded-2xl border border-white/70 bg-white/95 px-5 py-4 shadow-[0_16px_40px_rgba(26,45,37,0.16)] backdrop-blur sm:left-8 sm:px-6">
-              <span className="grid h-11 w-11 place-items-center rounded-full bg-[#e1eee7] text-[#24634e]"><Award className="h-5 w-5" /></span>
-              <span><strong className="display block text-2xl leading-none text-[#202522]">19 years</strong><span className="mt-1 block text-xs font-semibold uppercase tracking-[0.1em] text-[#69716c]">in real estate</span></span>
+            <div className="absolute -bottom-6 left-4 flex items-center gap-3 rounded-2xl border border-white/70 bg-white/80 px-5 py-4 shadow-[0_18px_45px_rgba(47,37,28,0.16)] backdrop-blur-xl sm:left-8 sm:px-6">
+              <span className="grid h-11 w-11 place-items-center rounded-full bg-[#eee2d2] text-[#754f35]"><Award className="h-5 w-5" /></span>
+              <span><strong className="display block text-2xl leading-none text-[#1d2923]">19 years</strong><span className="mt-1 block text-xs font-semibold uppercase tracking-[0.12em] text-[#657069]">in real estate</span></span>
             </div>
           </div>
-          <div data-reveal="right" className="pt-5 lg:pt-0">
-            <p className="eyebrow">Meet your agent</p>
-            <h2 className="display mt-3 text-4xl leading-[1.04] tracking-[-0.045em] sm:text-6xl">Glenndz Rivera</h2>
-            <p className="mt-3 text-sm font-bold uppercase tracking-[0.13em] text-[#24634e]">DGR Realty Property Consultant</p>
-            <p className="mt-7 max-w-2xl text-base leading-8 text-[#59625c]">With 19 years of real-estate experience, Glenndz brings seasoned local insight and steady, personal guidance to every property decision—whether you are buying, selling, renting, or investing.</p>
-            <blockquote className="mt-7 max-w-2xl border-l-2 border-[#8eaf9f] pl-5 text-lg leading-8 text-[#33443c]">“My role is to make each step clear, practical, and easier to move forward with confidence.”</blockquote>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              {['Experienced, personal guidance', 'Support from search to closing', 'Local property-market knowledge', 'Clear and responsive communication'].map((item) => <p key={item} className="flex items-center gap-3 text-sm font-medium"><CheckCircle2 className="h-5 w-5 shrink-0 text-[#24634e]" /> {item}</p>)}
+          <div data-reveal="right" className="pt-6 lg:pt-0">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#1f5b46]">Real Estate Broker</p>
+            <h2 className="display mt-4 text-5xl leading-[1.02] tracking-[-0.05em] text-[#202823] sm:text-6xl lg:text-7xl">Glenndz Rivera</h2>
+            <p className="mt-4 text-base font-bold text-[#424a45]">DGR Realty</p>
+            <p className="mt-7 max-w-2xl text-base leading-8 text-[#5d655f]">With 19 years of experience, Glenndz brings seasoned local insight and steady guidance to every property decision. Let&apos;s sit down and make your next move clear, practical, and confident.</p>
+            <div className="mt-9 grid grid-cols-2 gap-x-5 gap-y-6">
+              {agentValueProps.map(({ label, Icon }) => (
+                <div key={label} className="flex items-start gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#b9c9c0] text-[#1f5b46]"><Icon className="h-[18px] w-[18px]" /></span>
+                  <p className="pt-1 text-sm font-semibold leading-5 text-[#37413b]">{label}</p>
+                </div>
+              ))}
             </div>
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <Link href="/#contact" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#24634e] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#1b4f3e]">Contact Glenndz <ArrowRight className="h-4 w-4" /></Link>
-              <Link href="/properties" className="inline-flex items-center justify-center rounded-xl border border-[#cfd8d2] bg-white px-6 py-3.5 text-sm font-bold text-[#26352e] transition hover:border-[#9fb5a9] hover:bg-[#f9fbf9]">View properties</Link>
+            <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+              <Link href="/#contact" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1f5b46] px-6 py-3.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(31,91,70,0.18)] transition hover:bg-[#174735]">Let&apos;s Talk Properties <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/properties" className="inline-flex items-center justify-center rounded-xl border border-[#1f5b46] bg-transparent px-6 py-3.5 text-sm font-bold text-[#27332d] transition hover:bg-[#edf1eb]">View Listings</Link>
             </div>
-            {(contact.phone || contact.email) && (
-              <div className="mt-6 flex flex-col gap-3 text-sm text-[#526059] sm:flex-row sm:gap-6">
-                {contact.phone && contact.phoneHref && <a href={contact.phoneHref} className="flex items-center gap-2 transition hover:text-[#24634e]"><Phone className="h-4 w-4" /> {contact.phone}</a>}
-                {contact.email && contact.emailHref && <a href={contact.emailHref} className="flex items-center gap-2 transition hover:text-[#24634e]"><Mail className="h-4 w-4" /> {contact.email}</a>}
-              </div>
-            )}
+            <div className="mt-7 flex flex-col gap-3 border-t border-[#ded5c9] pt-6 text-sm text-[#535d57] sm:flex-row sm:flex-wrap sm:gap-x-6">
+              <a href="tel:+639088961940" className="flex items-center gap-2 transition hover:text-[#1f5b46]"><Phone className="h-4 w-4 text-[#1f5b46]" /> +63 908 896 1940</a>
+              <a href="mailto:glenndz_rivera@yahoo.com" className="flex items-center gap-2 break-all transition hover:text-[#1f5b46]"><Mail className="h-4 w-4 shrink-0 text-[#1f5b46]" /> glenndz_rivera@yahoo.com</a>
+            </div>
           </div>
         </div>
       </section>
