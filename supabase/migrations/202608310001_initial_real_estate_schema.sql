@@ -168,4 +168,4 @@ create policy "Admins delete stored property images"
 on storage.objects for delete using (bucket_id = 'property-images' and public.is_admin());
 
 -- After creating the first Auth user, promote them once in the SQL editor:
--- update public.profiles set role = 'admin' where id = '<auth-user-uuid>';
+-- update public.profiles set role = 'admin' where id = '<auth-user-uuid>'/;

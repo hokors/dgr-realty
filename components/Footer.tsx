@@ -32,6 +32,11 @@ export function Footer() {
             {contact.messengerUrl && <a href={contact.messengerUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2.5 transition hover:text-white"><MessageCircle className="h-4 w-4" /> Messenger</a>}
             {!contact.phone && !contact.email && !contact.facebookUrl && !contact.messengerUrl && <Link href="/#contact" className="font-semibold text-white/80 transition hover:text-white">Send an inquiry</Link>}
           </div>
+          <div className="mt-6 border-t border-white/10 pt-5 text-xs leading-5 text-white/62">
+            <p>Real Estate Broker: {contact.brokerName}</p>
+            {contact.prcLicenseNumber && <p>PRC License No. {contact.prcLicenseNumber}</p>}
+            {contact.dhsudRegistrationNumber && <p>DHSUD Registration No. {contact.dhsudRegistrationNumber}</p>}
+          </div>
         </div>
       </div>
       <div className="border-t border-white/10">

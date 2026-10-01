@@ -173,8 +173,8 @@ export default async function Home() {
               <Link href="/properties" className="inline-flex items-center justify-center rounded-xl border border-[#1f5b46] bg-transparent px-6 py-3.5 text-sm font-bold text-[#27332d] transition hover:bg-[#edf1eb]">View Listings</Link>
             </div>
             <div className="mt-7 flex flex-col gap-3 border-t border-[#ded5c9] pt-6 text-sm text-[#535d57] sm:flex-row sm:flex-wrap sm:gap-x-6">
-              <a href="tel:+639088961940" className="flex items-center gap-2 transition hover:text-[#1f5b46]"><Phone className="h-4 w-4 text-[#1f5b46]" /> +63 908 896 1940</a>
-              <a href="mailto:glenndz_rivera@yahoo.com" className="flex items-center gap-2 break-all transition hover:text-[#1f5b46]"><Mail className="h-4 w-4 shrink-0 text-[#1f5b46]" /> glenndz_rivera@yahoo.com</a>
+              {contact.phone && contact.phoneHref && <a href={contact.phoneHref} className="flex items-center gap-2 transition hover:text-[#1f5b46]"><Phone className="h-4 w-4 text-[#1f5b46]" /> {contact.phone}</a>}
+              {contact.email && contact.emailHref && <a href={contact.emailHref} className="flex items-center gap-2 break-all transition hover:text-[#1f5b46]"><Mail className="h-4 w-4 shrink-0 text-[#1f5b46]" /> {contact.email}</a>}
             </div>
           </div>
         </div>
