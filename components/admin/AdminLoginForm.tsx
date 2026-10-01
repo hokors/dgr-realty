@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { LoaderCircle, LockKeyhole } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export function AdminLoginForm() {
@@ -95,18 +96,26 @@ export function AdminLoginForm() {
         ? `data:image/svg+xml;utf-8,${encodeURIComponent(mfa.qrCode)}`
         : null;
     return (
-      <form onSubmit={verifyMfa} className="w-full max-w-md rounded-3xl border border-[#dde2de] bg-white p-7 shadow-[0_24px_70px_rgba(23,54,44,0.12)] sm:p-9">
-        <div className="grid h-11 w-11 place-items-center rounded-xl bg-[#e5efe9] text-[#24634e]"><LockKeyhole className="h-5 w-5" /></div>
-        <p className="mt-7 text-xs font-bold uppercase tracking-[0.15em] text-[#24634e]">Two-factor authentication</p>
+      <form onSubmit={verifyMfa} className="w-full max-w-md rounded-3xl border border-[var(--brand-border)] bg-white p-7 shadow-[0_24px_70px_rgba(3,27,43,0.14)] sm:p-9">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="grid h-12 w-12 place-items-center rounded-xl bg-[var(--brand-primary)] p-1.5">
+              <Image src="/brand/dgr-mark.png" alt="DGR Realty" width={42} height={42} className="h-full w-full object-contain" />
+            </span>
+            <span className="text-sm font-bold tracking-[-0.02em] text-[var(--brand-primary)]"><span className="text-[var(--brand-accent)]">DGR</span> Realty</span>
+          </div>
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--brand-secondary-soft)] text-[var(--brand-secondary-strong)]"><LockKeyhole className="h-5 w-5" /></span>
+        </div>
+        <p className="mt-7 text-xs font-bold uppercase tracking-[0.15em] text-[var(--brand-secondary-strong)]">Two-factor authentication</p>
         <h1 className="display mt-3 text-4xl tracking-[-0.045em]">{mfa.enrollment ? 'Secure your account' : 'Enter your security code'}</h1>
-        <p className="mt-3 text-sm leading-6 text-[#69716c]">
+        <p className="mt-3 text-sm leading-6 text-[var(--brand-muted)]">
           {mfa.enrollment
             ? 'Scan this QR code with Google Authenticator, Microsoft Authenticator, Authy, or another TOTP app.'
             : 'Enter the current six-digit code from your authenticator app.'}
         </p>
 
         {mfa.enrollment && qrSource && (
-          <div className="mt-6 grid place-items-center rounded-2xl border border-[#dde2de] bg-white p-4">
+          <div className="mt-6 grid place-items-center rounded-2xl border border-[var(--brand-border)] bg-white p-4">
             {/* This is a short-lived SVG data URL returned by Supabase, not an
                 image asset that should pass through Next's optimizer. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -120,37 +129,45 @@ export function AdminLoginForm() {
           </div>
         )}
         {mfa.enrollment && mfa.secret && (
-          <div className="mt-4 rounded-xl bg-[#f2f5f3] p-4 text-xs text-[#526059]">
+          <div className="mt-4 rounded-xl bg-[var(--brand-surface-muted)] p-4 text-xs text-[var(--brand-muted)]">
             <span className="block font-semibold">Can’t scan it? Enter this setup key:</span>
-            <code className="mt-2 block break-all font-mono text-sm text-[#202522]">{mfa.secret}</code>
+            <code className="mt-2 block break-all font-mono text-sm text-[var(--brand-text)]">{mfa.secret}</code>
           </div>
         )}
 
         <label className="mt-6 block"><span className="field-label">Six-digit code</span><input name="code" type="text" required autoComplete="one-time-code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} className="form-field text-center font-mono text-xl tracking-[0.35em]" /></label>
-        {error && <p className="mt-4 rounded-xl bg-[#f9e9e7] px-4 py-3 text-sm text-[#913d36]" role="alert">{error}</p>}
-        <button disabled={loading} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#24634e] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#1b4f3e] disabled:opacity-60">
+        {error && <p className="mt-4 rounded-xl bg-[var(--brand-error-soft)] px-4 py-3 text-sm text-[var(--brand-error)]" role="alert">{error}</p>}
+        <button disabled={loading} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-secondary-strong)] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[var(--brand-secondary-hover)] disabled:opacity-60">
           {loading && <LoaderCircle className="h-4 w-4 animate-spin" />} Verify and continue
         </button>
-        <button type="button" onClick={restart} disabled={loading} className="mt-3 w-full text-center text-xs font-semibold text-[#68716b] hover:text-[#202522]">Use a different account</button>
+        <button type="button" onClick={restart} disabled={loading} className="mt-3 w-full text-center text-xs font-semibold text-[var(--brand-muted)] hover:text-[var(--brand-text)]">Use a different account</button>
       </form>
     );
   }
 
   return (
-    <form onSubmit={signIn} className="w-full max-w-md rounded-3xl border border-[#dde2de] bg-white p-7 shadow-[0_24px_70px_rgba(23,54,44,0.12)] sm:p-9">
-      <div className="grid h-11 w-11 place-items-center rounded-xl bg-[#e5efe9] text-[#24634e]"><LockKeyhole className="h-5 w-5" /></div>
-      <p className="mt-7 text-xs font-bold uppercase tracking-[0.15em] text-[#24634e]">Private workspace</p>
+    <form onSubmit={signIn} className="w-full max-w-md rounded-3xl border border-[var(--brand-border)] bg-white p-7 shadow-[0_24px_70px_rgba(3,27,43,0.14)] sm:p-9">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="grid h-12 w-12 place-items-center rounded-xl bg-[var(--brand-primary)] p-1.5">
+            <Image src="/brand/dgr-mark.png" alt="DGR Realty" width={42} height={42} className="h-full w-full object-contain" />
+          </span>
+          <span className="text-sm font-bold tracking-[-0.02em] text-[var(--brand-primary)]"><span className="text-[var(--brand-accent)]">DGR</span> Realty</span>
+        </div>
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--brand-secondary-soft)] text-[var(--brand-secondary-strong)]"><LockKeyhole className="h-5 w-5" /></span>
+      </div>
+      <p className="mt-7 text-xs font-bold uppercase tracking-[0.15em] text-[var(--brand-secondary-strong)]">Private workspace</p>
       <h1 className="display mt-3 text-4xl tracking-[-0.045em]">Administrator login</h1>
-      <p className="mt-3 text-sm leading-6 text-[#69716c]">Sign in with an authorized DGR Realty admin account.</p>
+      <p className="mt-3 text-sm leading-6 text-[var(--brand-muted)]">Sign in with an authorized DGR Realty admin account.</p>
 
       <div className="mt-8 space-y-4">
         <label><span className="field-label">Email address</span><input name="email" type="email" required autoComplete="email" className="form-field" /></label>
         <label><span className="field-label">Password</span><input name="password" type="password" required autoComplete="current-password" className="form-field" /></label>
       </div>
 
-      {error && <p className="mt-4 rounded-xl bg-[#f9e9e7] px-4 py-3 text-sm text-[#913d36]" role="alert">{error}</p>}
+      {error && <p className="mt-4 rounded-xl bg-[var(--brand-error-soft)] px-4 py-3 text-sm text-[var(--brand-error)]" role="alert">{error}</p>}
 
-      <button disabled={loading} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#24634e] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#1b4f3e] disabled:opacity-60">
+      <button disabled={loading} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-secondary-strong)] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[var(--brand-secondary-hover)] disabled:opacity-60">
         {loading && <LoaderCircle className="h-4 w-4 animate-spin" />} Sign in securely
       </button>
     </form>

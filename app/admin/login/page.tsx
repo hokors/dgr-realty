@@ -9,7 +9,7 @@ export default async function AdminLoginPage() {
   if (admin) redirect('/admin');
 
   return (
-    <main className="grid min-h-screen place-items-center bg-[#eef2ef] px-5 py-12 text-[#202522]">
+    <main className="grid min-h-screen place-items-center bg-[var(--brand-surface-muted)] px-5 py-12 text-[var(--brand-text)]">
       <AdminLoginForm />
     </main>
   );

@@ -90,33 +90,33 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
   ].filter(Boolean) as string[][];
 
   const statusTone = property.status === 'Available'
-    ? 'bg-[#e5f1e9] text-[#28744e]'
+    ? 'bg-[var(--brand-success-soft)] text-[var(--brand-success)]'
     : property.status === 'Reserved' || property.status === 'Under Negotiation'
-      ? 'bg-[#f5eddb] text-[#806321]'
-      : 'bg-[#eceeed] text-[#5b635e]';
+      ? 'bg-[var(--brand-accent-soft)] text-[#806321]'
+      : 'bg-[#eceeed] text-[var(--brand-muted)]';
 
   return (
-    <main className="min-h-screen bg-[#f8f9f7] pb-20 text-[#202522] lg:pb-0">
+    <main className="min-h-screen bg-[var(--brand-background)] pb-20 text-[var(--brand-text)] lg:pb-0">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(propertyJsonLd) }}
       />
       <Header />
       <div className="mx-auto max-w-[1440px] px-5 pb-20 pt-5 sm:px-8 lg:px-12 lg:pb-24">
-        <div className="flex flex-wrap items-center gap-2 py-3 text-xs text-[#68716b]">
-          <Link href="/properties" className="flex items-center gap-1 hover:text-[#24634e]"><ArrowLeft className="h-3.5 w-3.5" /> Properties</Link><ChevronRight className="h-3 w-3" /><span>{property.category}</span><span className="hidden items-center gap-2 sm:flex"><ChevronRight className="h-3 w-3" /><span className="max-w-48 truncate text-[#333936]">{property.title}</span></span>
+        <div className="flex flex-wrap items-center gap-2 py-3 text-xs text-[var(--brand-muted)]">
+          <Link href="/properties" className="flex items-center gap-1 hover:text-[var(--brand-secondary-strong)]"><ArrowLeft className="h-3.5 w-3.5" /> Properties</Link><ChevronRight className="h-3 w-3" /><span>{property.category}</span><span className="hidden items-center gap-2 sm:flex"><ChevronRight className="h-3 w-3" /><span className="max-w-48 truncate text-[var(--brand-text)]">{property.title}</span></span>
         </div>
 
         <section data-reveal className="mb-6 flex flex-col gap-4 py-3 sm:mb-7 sm:gap-5 sm:py-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="rounded-lg bg-[#e6f0eb] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[#24634e]">{property.listingType}</span>
+              <span className="rounded-lg bg-[var(--brand-secondary-soft)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--brand-secondary-strong)]">{property.listingType}</span>
               <span className={`rounded-lg px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] ${statusTone}`}>{property.status}</span>
             </div>
             <h1 className="display max-w-4xl text-3xl leading-[1.05] tracking-[-0.035em] sm:text-5xl sm:tracking-[-0.045em]">{property.title}</h1>
-            <p className="mt-3 flex items-start gap-2 text-sm text-[#606963]"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#24634e]" /> {publicLocation}</p>
+            <p className="mt-3 flex items-start gap-2 text-sm text-[var(--brand-muted)]"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-secondary-strong)]" /> {publicLocation}</p>
           </div>
-          <div className="rounded-xl border border-[#dfe4e0] bg-white px-5 py-4 lg:min-w-72 lg:text-right"><p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#68716b]">{property.listingType}</p><p className="mt-1 text-3xl font-bold tracking-[-0.045em]">{formatPrice(property.price, property.priceSuffix)}</p><a href="#inquiry" className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-[#24634e]">Inquire about this property <ChevronRight className="h-3.5 w-3.5" /></a></div>
+          <div className="rounded-xl border border-[var(--brand-border)] bg-white px-5 py-4 lg:min-w-72 lg:text-right"><p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--brand-muted)]">{property.listingType}</p><p className="mt-1 text-3xl font-bold tracking-[-0.045em]">{formatPrice(property.price, property.priceSuffix)}</p><a href="#inquiry" className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-[var(--brand-secondary-strong)]">Inquire about this property <ChevronRight className="h-3.5 w-3.5" /></a></div>
         </section>
 
         <PropertyGallery images={property.images} title={property.title} />
@@ -124,40 +124,40 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
         <div className="mt-7 grid gap-8 sm:mt-10 lg:grid-cols-[minmax(0,1fr)_370px] lg:items-start lg:gap-10">
           <div>
             {specs.length > 0 && (
-              <section data-reveal className="grid grid-cols-2 overflow-hidden rounded-xl border border-[#e1e5e1] bg-white sm:grid-cols-3">
-                {specs.map(({ icon: Icon, value, label }) => <div key={label} className="border-b border-r border-[#edf0ed] p-4 sm:p-5"><Icon className="h-5 w-5 text-[#24634e]" strokeWidth={1.7} /><p className="mt-3 text-base font-bold">{value}</p><p className="mt-1 text-[10px] font-bold uppercase tracking-[0.09em] text-[#68716b]">{label}</p></div>)}
+              <section data-reveal className="grid grid-cols-2 overflow-hidden rounded-xl border border-[var(--brand-border)] bg-white sm:grid-cols-3">
+                {specs.map(({ icon: Icon, value, label }) => <div key={label} className="border-b border-r border-[var(--brand-surface-muted)] p-4 sm:p-5"><Icon className="h-5 w-5 text-[var(--brand-secondary-strong)]" strokeWidth={1.7} /><p className="mt-3 text-base font-bold">{value}</p><p className="mt-1 text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--brand-muted)]">{label}</p></div>)}
               </section>
             )}
 
-            <section data-reveal className="mt-7 rounded-xl border border-[#e1e5e1] bg-white p-5 sm:mt-10 sm:p-8">
+            <section data-reveal className="mt-7 rounded-xl border border-[var(--brand-border)] bg-white p-5 sm:mt-10 sm:p-8">
               <h2 className="text-xl font-bold tracking-[-0.025em]">Description</h2>
-              {descriptionContent.highlights.length > 0 ? <ul className="mt-5 grid max-w-3xl gap-3 text-[15px] leading-7 text-[#535c56]">{descriptionContent.highlights.map((highlight) => <li key={highlight} className="flex gap-3"><Check className="mt-1 h-4 w-4 shrink-0 text-[#24634e]" /> <span>{highlight}</span></li>)}</ul> : <div className="mt-5 max-w-3xl space-y-4 text-[15px] leading-8 text-[#535c56]">{(descriptionContent.paragraphs.length ? descriptionContent.paragraphs : ['Contact DGR Realty for the full description and additional information about this property.']).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>}
+              {descriptionContent.highlights.length > 0 ? <ul className="mt-5 grid max-w-3xl gap-3 text-[15px] leading-7 text-[var(--brand-muted)]">{descriptionContent.highlights.map((highlight) => <li key={highlight} className="flex gap-3"><Check className="mt-1 h-4 w-4 shrink-0 text-[var(--brand-secondary-strong)]" /> <span>{highlight}</span></li>)}</ul> : <div className="mt-5 max-w-3xl space-y-4 text-[15px] leading-8 text-[var(--brand-muted)]">{(descriptionContent.paragraphs.length ? descriptionContent.paragraphs : ['Contact DGR Realty for the full description and additional information about this property.']).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>}
             </section>
 
             {property.amenities.length > 0 && (
-              <section data-reveal className="mt-6 rounded-xl border border-[#e1e5e1] bg-white p-5 sm:p-8">
+              <section data-reveal className="mt-6 rounded-xl border border-[var(--brand-border)] bg-white p-5 sm:p-8">
                 <h2 className="text-xl font-bold tracking-[-0.025em]">Features &amp; amenities</h2>
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">{property.amenities.map((amenity) => <span key={amenity} className="flex items-center gap-3 text-sm text-[#4f5752]"><span className="grid h-6 w-6 place-items-center rounded-full bg-[#e6f0eb]"><Check className="h-3.5 w-3.5 text-[#24634e]" /></span>{amenity}</span>)}</div>
+                <div className="mt-6 grid gap-4 sm:grid-cols-2">{property.amenities.map((amenity) => <span key={amenity} className="flex items-center gap-3 text-sm text-[var(--brand-muted)]"><span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--brand-secondary-soft)]"><Check className="h-3.5 w-3.5 text-[var(--brand-secondary-strong)]" /></span>{amenity}</span>)}</div>
               </section>
             )}
 
-            <section data-reveal className="mt-6 rounded-xl border border-[#e1e5e1] bg-white p-5 sm:p-8">
+            <section data-reveal className="mt-6 rounded-xl border border-[var(--brand-border)] bg-white p-5 sm:p-8">
               <h2 className="text-xl font-bold tracking-[-0.025em]">Property details</h2>
-              <dl className="mt-5 divide-y divide-[#edf0ed]">{propertyDetails.map(([label, value]) => <div key={label} className="flex items-center justify-between gap-5 py-3.5 text-sm"><dt className="text-[#737b76]">{label}</dt><dd className="text-right font-semibold text-[#2b312d]">{value}</dd></div>)}</dl>
+              <dl className="mt-5 divide-y divide-[var(--brand-surface-muted)]">{propertyDetails.map(([label, value]) => <div key={label} className="flex items-center justify-between gap-5 py-3.5 text-sm"><dt className="text-[var(--brand-muted)]">{label}</dt><dd className="text-right font-semibold text-[var(--brand-text)]">{value}</dd></div>)}</dl>
             </section>
 
-            {property.showMap && <section data-reveal className="mt-6 rounded-xl border border-[#e1e5e1] bg-white p-5 sm:p-8">
+            {property.showMap && <section data-reveal className="mt-6 rounded-xl border border-[var(--brand-border)] bg-white p-5 sm:p-8">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h2 className="text-xl font-bold tracking-[-0.025em]">Location</h2>
-                  <p className="mt-3 flex items-start gap-2 text-sm text-[#59615c]"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#24634e]" /> {mapQuery}</p>
+                  <p className="mt-3 flex items-start gap-2 text-sm text-[var(--brand-muted)]"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-secondary-strong)]" /> {mapQuery}</p>
                 </div>
-                <a href={directionsUrl} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[#dce1dd] px-4 py-2.5 text-xs font-bold text-[#24634e] transition hover:bg-[#f2f6f3]">
+                <a href={directionsUrl} target="_blank" rel="noreferrer" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--brand-border)] px-4 py-2.5 text-xs font-bold text-[var(--brand-secondary-strong)] transition hover:bg-[var(--brand-secondary-soft)]">
                   <Navigation className="h-4 w-4" /> Get directions
                 </a>
               </div>
               {mapEmbedUrl ? (
-                <div className="mt-5 overflow-hidden rounded-xl border border-[#dde3df] bg-[#eef2ef]">
+                <div className="mt-5 overflow-hidden rounded-xl border border-[var(--brand-border)] bg-[var(--brand-surface-muted)]">
                   <iframe
                     title={`Map showing ${property.location}, ${property.city}`}
                     src={mapEmbedUrl}
@@ -168,29 +168,29 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                   />
                 </div>
               ) : (
-                <div className="mt-5 grid min-h-48 place-items-center rounded-xl bg-[#eef2ef] px-6 text-center">
-                  <div><MapPin className="mx-auto h-6 w-6 text-[#24634e]" /><p className="mt-2 text-sm font-semibold">View this location on Google Maps</p><a href={directionsUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-bold text-[#24634e] underline underline-offset-4">Open map</a></div>
+                <div className="mt-5 grid min-h-48 place-items-center rounded-xl bg-[var(--brand-surface-muted)] px-6 text-center">
+                  <div><MapPin className="mx-auto h-6 w-6 text-[var(--brand-secondary-strong)]" /><p className="mt-2 text-sm font-semibold">View this location on Google Maps</p><a href={directionsUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-bold text-[var(--brand-secondary-strong)] underline underline-offset-4">Open map</a></div>
                 </div>
               )}
             </section>}
 
           </div>
 
-          <aside data-reveal="right" id="inquiry" className="rounded-xl border border-[#dde2de] bg-white p-6 shadow-[0_12px_34px_rgba(29,39,33,0.07)] lg:sticky lg:top-24 sm:p-7">
+          <aside data-reveal="right" id="inquiry" className="rounded-xl border border-[var(--brand-border)] bg-white p-6 shadow-[0_12px_34px_rgba(29,39,33,0.07)] lg:sticky lg:top-24 sm:p-7">
             <h2 className="text-xl font-bold tracking-[-0.025em]">Interested in this property?</h2>
-            <p className="mt-3 text-sm leading-6 text-[#68716b]">Ask about availability, request details, or schedule a viewing with DGR Realty.</p>
+            <p className="mt-3 text-sm leading-6 text-[var(--brand-muted)]">Ask about availability, request details, or schedule a viewing with DGR Realty.</p>
             <InquiryForm source="property" variant="property" propertyId={property.id} propertyTitle={property.title} />
-            {(contact.phoneHref || contact.emailHref || contact.facebookUrl || contact.messengerUrl) && <div className="my-5 h-px bg-[#edf0ed]" />}
+            {(contact.phoneHref || contact.emailHref || contact.facebookUrl || contact.messengerUrl) && <div className="my-5 h-px bg-[var(--brand-surface-muted)]" />}
             <div className="grid gap-2.5">
-              {contact.phoneHref && <a href={contact.phoneHref} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dce1dd] px-5 py-3 text-sm font-semibold hover:bg-[#f4f6f4]"><Phone className="h-4 w-4" /> Call DGR Realty</a>}
-              {contact.emailHref && <a href={contact.emailHref} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dce1dd] px-5 py-3 text-sm font-semibold hover:bg-[#f4f6f4]"><Mail className="h-4 w-4" /> Email DGR Realty</a>}
-              {contact.facebookUrl && <a href={contact.facebookUrl} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dce1dd] px-5 py-3 text-sm font-semibold hover:bg-[#f4f6f4]"><MessageCircle className="h-4 w-4" /> Message on Facebook</a>}
-              {contact.messengerUrl && <a href={contact.messengerUrl} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#dce1dd] px-5 py-3 text-sm font-semibold hover:bg-[#f4f6f4]"><MessageCircle className="h-4 w-4" /> Messenger</a>}
+              {contact.phoneHref && <a href={contact.phoneHref} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--brand-border)] px-5 py-3 text-sm font-semibold hover:bg-[var(--brand-background)]"><Phone className="h-4 w-4" /> Call DGR Realty</a>}
+              {contact.emailHref && <a href={contact.emailHref} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--brand-border)] px-5 py-3 text-sm font-semibold hover:bg-[var(--brand-background)]"><Mail className="h-4 w-4" /> Email DGR Realty</a>}
+              {contact.facebookUrl && <a href={contact.facebookUrl} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--brand-border)] px-5 py-3 text-sm font-semibold hover:bg-[var(--brand-background)]"><MessageCircle className="h-4 w-4" /> Message on Facebook</a>}
+              {contact.messengerUrl && <a href={contact.messengerUrl} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--brand-border)] px-5 py-3 text-sm font-semibold hover:bg-[var(--brand-background)]"><MessageCircle className="h-4 w-4" /> Messenger</a>}
             </div>
           </aside>
         </div>
       </div>
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dce2dd] bg-white/96 px-4 py-3 shadow-[0_-10px_35px_rgba(24,35,29,0.10)] backdrop-blur lg:hidden"><div className="mx-auto flex max-w-xl items-center justify-between gap-4"><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#68716b]">{property.listingType}</p><p className="truncate text-lg font-bold tracking-[-0.03em]">{formatPrice(property.price, property.priceSuffix)}</p></div><a href="#inquiry" className="shrink-0 rounded-xl bg-[#24634e] px-5 py-3 text-sm font-bold text-white">Inquire now</a></div></div>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--brand-border)] bg-white/96 px-4 py-3 shadow-[0_-10px_35px_rgba(24,35,29,0.10)] backdrop-blur lg:hidden"><div className="mx-auto flex max-w-xl items-center justify-between gap-4"><div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--brand-muted)]">{property.listingType}</p><p className="truncate text-lg font-bold tracking-[-0.03em]">{formatPrice(property.price, property.priceSuffix)}</p></div><a href="#inquiry" className="shrink-0 rounded-xl bg-[var(--brand-secondary-strong)] px-5 py-3 text-sm font-bold text-white">Inquire now</a></div></div>
       <Footer />
     </main>
   );

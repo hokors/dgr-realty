@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { Mail, MessageCircle, Phone } from 'lucide-react';
 import { getPublicContactDetails } from '@/lib/contact';
@@ -8,12 +9,15 @@ export function Footer() {
   const contact = getPublicContactDetails();
 
   return (
-    <footer className="bg-[#202522] text-white">
+    <footer className="bg-brand-primary-strong text-white">
       <div data-reveal className="mx-auto grid max-w-[1440px] gap-12 px-5 py-16 sm:px-8 md:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_1fr_1.1fr] lg:px-12 lg:py-20">
         <div>
-          <Link href="/" className="text-xl font-bold tracking-[-0.04em]">DGR Realty</Link>
+          <Link href="/" className="inline-flex items-center gap-3 text-xl font-bold tracking-[-0.04em]">
+            <span className="grid h-12 w-12 place-items-center rounded-xl bg-white"><Image src="/brand/dgr-mark.png" alt="" width={44} height={44} className="h-10 w-10 object-contain" /></span>
+            <span><span className="text-brand-accent">DGR</span> Realty</span>
+          </Link>
           <p className="mt-4 max-w-sm text-sm leading-7 text-white/72">A clear, modern way to browse homes, land, rentals, and investment opportunities across Pampanga.</p>
-          <Link href="/properties" className="mt-6 inline-flex rounded-xl bg-white px-5 py-3 text-sm font-bold text-[#202522] transition hover:bg-[#eef1ee]">Browse properties</Link>
+          <Link href="/properties" className="mt-6 inline-flex rounded-xl bg-white px-5 py-3 text-sm font-bold text-brand-primary transition hover:bg-brand-secondary-soft">Browse properties</Link>
         </div>
         <div>
           <p className="mb-5 text-xs font-bold uppercase tracking-[0.12em] text-white/65">Explore</p>

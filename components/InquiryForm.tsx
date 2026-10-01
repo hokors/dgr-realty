@@ -118,7 +118,7 @@ export function InquiryForm({ source, propertyId, propertyTitle, variant = 'home
   if (success) {
     return (
       <div className={`grid place-items-center text-center ${variant === 'home' ? 'min-h-[440px] p-7 sm:p-10 lg:p-12' : 'py-8'}`} role="status">
-        <div><div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#e4f1e9] text-[#26734c]"><CheckCircle2 className="h-6 w-6" /></div><h3 className="mt-5 text-xl font-bold">Inquiry received</h3><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[#68716b]">Thank you. DGR Realty will review your message and contact you using the details provided.</p><button type="button" onClick={() => window.location.reload()} className="mt-5 text-sm font-bold text-[#24634e]">Send another inquiry</button></div>
+        <div><div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[var(--brand-success-soft)] text-[var(--brand-success)]"><CheckCircle2 className="h-6 w-6" /></div><h3 className="mt-5 text-xl font-bold">Inquiry received</h3><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[var(--brand-muted)]">Thank you. DGR Realty will review your message and contact you using the details provided.</p><button type="button" onClick={() => window.location.reload()} className="mt-5 text-sm font-bold text-[var(--brand-secondary-strong)]">Send another inquiry</button></div>
       </div>
     );
   }
@@ -144,12 +144,12 @@ export function InquiryForm({ source, propertyId, propertyTitle, variant = 'home
 
       <label className={variant === 'home' ? 'sm:col-span-2' : 'block'}><span className="field-label">Message</span><textarea required minLength={10} maxLength={3000} className="form-field min-h-32 resize-y" name="message" defaultValue={propertyTitle ? `I'm interested in ${propertyTitle}. Please share availability and viewing details.` : ''} placeholder="Tell us a little about what you need" /></label>
 
-      <label className={`flex items-start gap-3 rounded-xl bg-[#f4f7f5] p-3.5 ${variant === 'home' ? 'sm:col-span-2' : ''}`}><input required name="consent" type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-[#24634e]" /><span className="text-[11px] leading-5 text-[#66716a]">I agree that DGR Realty may use my details to respond to this inquiry, as described in the <Link href="/privacy" className="font-bold text-[#24634e] underline underline-offset-2">Privacy Notice</Link>.</span></label>
+      <label className={`flex items-start gap-3 rounded-xl bg-[var(--brand-surface-muted)] p-3.5 ${variant === 'home' ? 'sm:col-span-2' : ''}`}><input required name="consent" type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--brand-secondary-strong)]" /><span className="text-[11px] leading-5 text-[var(--brand-muted)]">I agree that DGR Realty may use my details to respond to this inquiry, as described in the <Link href="/privacy" className="font-bold text-[var(--brand-secondary-strong)] underline underline-offset-2">Privacy Notice</Link>.</span></label>
 
       {turnstileSiteKey && <div ref={turnstileContainerRef} className={variant === 'home' ? 'sm:col-span-2' : ''} />}
-      {error && <p className={`rounded-xl bg-[#fae8e6] px-4 py-3 text-sm text-[#923f38] ${variant === 'home' ? 'sm:col-span-2' : ''}`} role="alert">{error}</p>}
+      {error && <p className={`rounded-xl bg-[var(--brand-error-soft)] px-4 py-3 text-sm text-[var(--brand-error)] ${variant === 'home' ? 'sm:col-span-2' : ''}`} role="alert">{error}</p>}
 
-      <button disabled={submitting} className={`flex items-center justify-center gap-2 rounded-xl bg-[#24634e] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#1b4f3e] disabled:cursor-not-allowed disabled:opacity-60 ${variant === 'home' ? 'sm:col-span-2' : 'w-full'}`}>
+      <button disabled={submitting} className={`flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-secondary-strong)] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[var(--brand-secondary-hover)] disabled:cursor-not-allowed disabled:opacity-60 ${variant === 'home' ? 'sm:col-span-2' : 'w-full'}`}>
         {submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : variant === 'property' ? <Mail className="h-4 w-4" /> : null}
         {submitting ? 'Sending inquiry…' : 'Send inquiry'}
         {!submitting && variant === 'home' && <ArrowRight className="h-4 w-4" />}

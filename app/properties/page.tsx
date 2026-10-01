@@ -34,13 +34,13 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
   });
 
   return (
-    <main className="min-h-screen bg-[#f8f9f7] text-[#202522]">
+    <main className="min-h-screen bg-[var(--brand-background)] text-[var(--brand-text)]">
       <Header />
-      <section className="border-b border-[#e6e9e5] bg-white">
+      <section className="border-b border-[var(--brand-border)] bg-white">
         <div data-reveal className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 sm:py-12 lg:px-12 lg:py-14">
           <p className="eyebrow">Properties</p>
           <h1 className="display mt-3 text-3xl tracking-[-0.035em] sm:text-5xl sm:tracking-[-0.045em]">Browse available properties</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#606963] sm:mt-4 sm:leading-7">Compare homes, land, rentals, and commercial opportunities across Pampanga.</p>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--brand-muted)] sm:mt-4 sm:leading-7">Compare homes, land, rentals, and commercial opportunities across Pampanga.</p>
         </div>
       </section>
       <section data-reveal className="mx-auto max-w-[1440px] px-5 py-7 sm:px-8 sm:py-10 lg:px-12 lg:py-12">

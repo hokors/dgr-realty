@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { Building2, ExternalLink, Gauge, Home, Mail, Plus } from 'lucide-react';
 import { SignOutButton } from '@/components/admin/SignOutButton';
@@ -12,10 +13,10 @@ const navigation = [
 
 export function AdminShell({ children, email }: { children: ReactNode; email: string }) {
   return (
-    <div className="min-h-screen bg-[#f3f5f2] text-[#202522] lg:grid lg:grid-cols-[250px_minmax(0,1fr)]">
-      <aside className="bg-[#17362c] px-5 py-5 text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:px-6 lg:py-7">
+    <div className="min-h-screen bg-brand-background text-brand-text lg:grid lg:grid-cols-[250px_minmax(0,1fr)]">
+      <aside className="bg-brand-primary px-5 py-5 text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:px-6 lg:py-7">
         <div className="flex items-center justify-between gap-4">
-          <Link href="/admin" className="text-lg font-bold tracking-[-0.04em]">DGR Realty</Link>
+          <Link href="/admin" className="flex items-center gap-2 text-lg font-bold tracking-[-0.04em]"><span className="grid h-9 w-9 place-items-center rounded-lg bg-white"><Image src="/brand/dgr-mark.png" alt="" width={34} height={34} className="h-8 w-8 object-contain" /></span><span><span className="text-brand-accent">DGR</span> Realty</span></Link>
           <SignOutButton />
         </div>
 

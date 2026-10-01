@@ -1,13 +1,56 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #f8f9f7;
-  --foreground: #202522;
+  color-scheme: light;
+  --brand-primary: #06283d;
+  --brand-primary-strong: #031b2b;
+  --brand-primary-soft: #eaf1f5;
+  --brand-secondary: #08a6c2;
+  --brand-secondary-strong: #00758d;
+  --brand-secondary-hover: #005d72;
+  --brand-secondary-soft: #e8f7fa;
+  --brand-accent: #ff4b0b;
+  --brand-accent-strong: #c93600;
+  --brand-accent-soft: #fff0e9;
+  --brand-background: #f5f8fa;
+  --brand-surface: #ffffff;
+  --brand-surface-muted: #eef3f6;
+  --brand-text: #102a3a;
+  --brand-muted: #617580;
+  --brand-border: #d8e3e8;
+  --brand-border-strong: #bed0d8;
+  --brand-success: #197451;
+  --brand-success-soft: #e8f4ed;
+  --brand-error: #a63f3a;
+  --brand-error-soft: #fbecea;
+  --background: var(--brand-background);
+  --foreground: var(--brand-text);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-strong: var(--brand-primary-strong);
+  --color-brand-primary-soft: var(--brand-primary-soft);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-secondary-strong: var(--brand-secondary-strong);
+  --color-brand-secondary-hover: var(--brand-secondary-hover);
+  --color-brand-secondary-soft: var(--brand-secondary-soft);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-strong: var(--brand-accent-strong);
+  --color-brand-accent-soft: var(--brand-accent-soft);
+  --color-brand-background: var(--brand-background);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-surface-muted: var(--brand-surface-muted);
+  --color-brand-text: var(--brand-text);
+  --color-brand-muted: var(--brand-muted);
+  --color-brand-border: var(--brand-border);
+  --color-brand-border-strong: var(--brand-border-strong);
+  --color-brand-success: var(--brand-success);
+  --color-brand-success-soft: var(--brand-success-soft);
+  --color-brand-error: var(--brand-error);
+  --color-brand-error-soft: var(--brand-error-soft);
   --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -23,7 +66,11 @@ body {
 a { text-decoration: none; }
 button, input, select, textarea { font: inherit; }
 button, summary, select { cursor: pointer; }
-::selection { background: #cfe3da; color: #173f32; }
+::selection { background: var(--brand-secondary-soft); color: var(--brand-primary); }
+
+:focus-visible {
+  outline-color: var(--brand-secondary);
+}
 
 .display {
   font-family: Georgia, Cambria, "Times New Roman", serif;
@@ -35,31 +82,31 @@ button, summary, select { cursor: pointer; }
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #24634e;
+  color: var(--brand-secondary-strong);
 }
 
 .form-field {
   min-height: 3rem;
   width: 100%;
-  border: 1px solid #d9ddd6;
+  border: 1px solid var(--brand-border);
   border-radius: 0.75rem;
   background: #fff;
   padding: 0.75rem 1rem;
-  color: #202522;
+  color: var(--brand-text);
   font-size: 0.875rem;
   outline: none;
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .form-field:focus {
-  border-color: #24634e;
-  box-shadow: 0 0 0 3px rgba(36, 99, 78, 0.1);
+  border-color: var(--brand-secondary);
+  box-shadow: 0 0 0 3px rgb(8 166 194 / 0.14);
 }
 
 .field-label {
   display: block;
   margin-bottom: 0.5rem;
-  color: #6b756e;
+  color: var(--brand-muted);
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.08em;
