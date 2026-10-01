@@ -117,25 +117,26 @@ const propertySelect = `
 
 const sampleDataEnabled = process.env.NODE_ENV === 'development';
 
-class PropertyDataUnavailableError extends Error {}
-
-function developmentFallbackOrThrow<T>(context: string, fallback: T, error?: unknown): T {
+function publicReadFallback<T>(
+  context: string,
+  developmentFallback: T,
+  productionFallback: T,
+  error?: unknown,
+): T {
   const errorCode = error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
     ? error.code.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40)
     : undefined;
   console.error(context, errorCode ? { errorCode } : undefined);
-  if (!sampleDataEnabled) {
-    throw new PropertyDataUnavailableError('Property data is currently unavailable.');
-  }
-  return fallback;
+  return sampleDataEnabled ? developmentFallback : productionFallback;
 }
 
 export async function getProperties(): Promise<Property[]> {
   const client = publicClient();
   if (!client) {
-    return developmentFallbackOrThrow(
+    return publicReadFallback(
       'Supabase property configuration is missing.',
       sampleProperties,
+      [],
     );
   }
 
@@ -147,13 +148,12 @@ export async function getProperties(): Promise<Property[]> {
       .order('created_at', { ascending: false });
 
     if (error) {
-      return developmentFallbackOrThrow('Unable to load Supabase properties.', sampleProperties, error);
+      return publicReadFallback('Unable to load Supabase properties.', sampleProperties, [], error);
     }
 
     return (data as unknown as DatabaseProperty[]).map(mapProperty);
   } catch (error) {
-    if (error instanceof PropertyDataUnavailableError) throw error;
-    return developmentFallbackOrThrow('Unable to load Supabase properties.', sampleProperties, error);
+    return publicReadFallback('Unable to load Supabase properties.', sampleProperties, [], error);
   }
 }
 
@@ -161,9 +161,10 @@ export async function getPropertyBySlug(slug: string): Promise<Property | null> 
   const client = publicClient();
   const developmentProperty = sampleProperties.find((property) => property.slug === slug) ?? null;
   if (!client) {
-    return developmentFallbackOrThrow(
+    return publicReadFallback(
       'Supabase property configuration is missing.',
       developmentProperty,
+      null,
     );
   }
 
@@ -176,7 +177,7 @@ export async function getPropertyBySlug(slug: string): Promise<Property | null> 
       .maybeSingle();
 
     if (error) {
-      return developmentFallbackOrThrow('Unable to load Supabase property.', developmentProperty, error);
+      return publicReadFallback('Unable to load Supabase property.', developmentProperty, null, error);
     }
 
     if (!data) return null;
@@ -194,7 +195,6 @@ export async function getPropertyBySlug(slug: string): Promise<Property | null> 
       ? { ...property, mapLocation: mapConfig.map_location ?? undefined, showMap: true }
       : property;
   } catch (error) {
-    if (error instanceof PropertyDataUnavailableError) throw error;
-    return developmentFallbackOrThrow('Unable to load Supabase property.', developmentProperty, error);
+    return publicReadFallback('Unable to load Supabase property.', developmentProperty, null, error);
   }
 }

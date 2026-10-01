@@ -80,7 +80,15 @@ export default async function Home() {
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,27,43,.84)_0%,rgba(6,40,61,.48)_55%,rgba(6,40,61,.16)_100%)]" />
         <div className="relative mx-auto flex min-h-[560px] max-w-[1440px] items-center px-5 py-10 sm:min-h-[620px] sm:px-8 sm:py-14 lg:min-h-[700px] lg:px-12">
           <div className="hero-intro w-full max-w-4xl">
-            <p className="mb-4 text-xs font-bold uppercase tracking-[0.18em] text-white/75">Property across Pampanga</p>
+            <div className="mb-6 inline-flex items-center gap-3 rounded-2xl border border-white/20 bg-[var(--brand-primary-strong)]/55 px-3 py-2.5 shadow-[0_12px_35px_rgba(3,27,43,0.22)] backdrop-blur-md">
+              <span className="grid h-12 w-12 place-items-center rounded-xl bg-white p-1">
+                <Image src="/brand/dgr-mark.png" alt="" width={44} height={44} priority className="h-full w-full object-contain" />
+              </span>
+              <span className="pr-2">
+                <span className="block text-lg font-bold leading-none tracking-[-0.04em]"><span className="text-[var(--brand-accent)]">DGR</span> Realty</span>
+                <span className="mt-1 block text-[9px] font-semibold uppercase tracking-[0.14em] text-white/65">Property across Pampanga</span>
+              </span>
+            </div>
             <h1 className="display max-w-3xl text-4xl leading-[0.98] tracking-[-0.045em] sm:text-7xl sm:tracking-[-0.055em] lg:text-[82px]">Find your next property.</h1>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-white/88 sm:mt-5 sm:text-lg sm:leading-7">Search homes, land, commercial spaces, rentals, and investment opportunities in one trusted place.</p>
 
