@@ -5,6 +5,10 @@ import { PropertyBrowser } from '@/components/PropertyBrowser';
 import { getProperties } from '@/lib/properties';
 import { propertyFilterSchema } from '@/lib/security/validation';
 
+// Property data comes from Supabase when configured. Render at request time so
+// deployments never depend on an external database during the build step.
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Browse Properties',
   description: 'Browse houses, condominiums, land, rentals, commercial properties, and farm lots in Pampanga.',
