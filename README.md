@@ -1,6 +1,33 @@
 # DGR Realty
 
-## Automated checks
+A production real-estate website built for an independent Philippine brokerage. Buyers search and filter listings, browse SEO-friendly property pages and send inquiries; the broker manages listings, photos and leads from a secure admin dashboard.
+
+**Live site:** https://dgr2-snowy.vercel.app
+
+<p>
+  <img src="docs/home-desktop.png" alt="DGR Realty homepage on desktop" width="68%">
+  <img src="docs/property-detail-mobile.png" alt="Property detail page on mobile" width="28%">
+</p>
+
+## Features
+
+- **Property search:** URL-based filters, category browsing and full-screen photo galleries, on desktop and mobile
+- **SEO:** server-rendered listing pages, sitemap, robots rules and structured metadata
+- **Admin dashboard:** create, edit, publish/archive and delete listings with image uploads; saves are transactional, so a failed upload never leaves a half-saved listing
+- **Lead inbox:** validated inquiry form with status tracking and optional email notifications
+- **Security:** Supabase row-level security, admin multi-factor authentication, Zod input validation, rate limiting, a honeypot and Cloudflare Turnstile spam protection
+
+## Tech stack
+
+Next.js (App Router) · TypeScript · Tailwind CSS · Supabase (PostgreSQL, Auth, Storage) · Zod · Playwright · GitHub Actions · Vercel
+
+## Testing and CI
+
+- 24 Playwright end-to-end tests across public pages, SEO, admin authentication and security
+- GitHub Actions runs lint, build and the full browser test suite on every push and pull request
+- Smoke tests run automatically against each new Vercel deployment
+
+### Running the checks
 
 Run the local code-quality suite with `npm run check`. For browser tests on
 Windows, keep `npm run dev` open in one terminal and run `npm run test:e2e` in a
@@ -12,8 +39,6 @@ Set `PLAYWRIGHT_TEST_BASE_URL` to test an existing deployment. The optional
 `E2E_DRAFT_PROPERTY_SLUG` variable enables a check against a real draft record.
 Never run future create/edit/delete tests against the production Supabase
 project; use a separate test project for destructive admin scenarios.
-
-A responsive Next.js property catalog for DGR Realty, with property search, SEO-friendly detail pages, a Supabase-backed admin dashboard, image management, and secure inquiry capture.
 
 ## Local setup
 
